@@ -45,15 +45,72 @@ Resources:
       CodeUri: functions/create-poll
       Handler: create-poll.handler
       Runtime: nodejs24.x
-      Timeout: 10
       Architectures:
         - arm64
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref PollDBSecret
+          DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
+          DB_NAME: "pollvoterdb"
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref PollDBSecret
+            - Effect: Allow
+              Action:
+                - rds-data:ExecuteStatement
+                - rds-data:BatchExecuteStatement
+                - rds-data:BeginTransaction
+                - rds-data:CommitTransaction
+                - rds-data:RollbackTransaction
+              Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
       Events:
         SubmitApi:
           Type: Api
           Properties:
             Path: /polls
             Method: post
+            RestApiId: !Ref PollApi
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+
+  # Lambda function to list polls
+  ListPollFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-ListPollFunction"
+      CodeUri: functions/list-polls
+      Handler: list-polls.handler
+      Runtime: nodejs24.x
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref PollDBSecret
+          DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
+          DB_NAME: "pollvoterdb"
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref PollDBSecret
+            - Effect: Allow
+              Action:
+                - rds-data:ExecuteStatement
+              Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
+      Events:
+        ListApi:
+          Type: Api
+          Properties:
+            Path: /polls
+            Method: get
             RestApiId: !Ref PollApi
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
@@ -72,6 +129,19 @@ Resources:
           FromPort: 5432
           ToPort: 5432
           CidrIp: 0.0.0.0/0 # WARNING: Insecure. Restrict it in production
+
+  PollDBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Database credentials for Aurora
+      SecretString: !Sub '{"username": "${DBUsername}", "password": "${DBPassword}"}'
+
+  PollDBSecretAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref PollDBSecret
+      TargetId: !Ref PollDatabaseCluster
+      TargetType: AWS::RDS::DBCluster
 
   # Aurora Serverless v2 PostgreSQL Database
   PollDatabaseCluster:
