@@ -18,13 +18,6 @@ Resources:
         AllowMethods: "'OPTIONS, POST, GET'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowOrigin: "'*'" # TODO Do not use this in Production
-      Auth:
-        DefaultAuthorizer: CognitoAuthorizer
-        Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn: !GetAtt CognitoUserPool.Arn
-        AddDefaultAuthorizerToCorsPreflight: false
-
 
   # Lambda function to handle submitting claims
   CreatePollFunction:
