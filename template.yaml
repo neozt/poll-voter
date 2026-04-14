@@ -6,6 +6,24 @@ Parameters:
   Environment:
     Type: String
     Default: Dev
+  DBUsername:
+    NoEcho: 'true'
+    Description: Username for Aurora PostgreSQL database access
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    Default: "postgresuser"
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9\-]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBPassword:
+    NoEcho: 'true'
+    Description: Password for Aurora PostgreSQL database access
+    Type: String
+    MinLength: '8'
+    MaxLength: '41'
+    Default: "postgrespassword"
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
 
 Resources:
   # API Gateway to submit claims via triggering the ClaimsApprovalStateMachine
@@ -43,6 +61,40 @@ Resources:
         Minify: true
         Target: es2020
         Sourcemap: true
+
+  # Security Group for Database Access
+  PollDatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow PostgreSQL access from anywhere
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0 # WARNING: Insecure. Restrict it in production
+
+  # Aurora Serverless v2 PostgreSQL Database
+  PollDatabaseCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      DatabaseName: pollvoterdb
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      EnableHttpEndpoint: true
+      VpcSecurityGroupIds:
+        - !GetAtt PollDatabaseSecurityGroup.GroupId
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 0.5
+        MaxCapacity: 1.0
+
+  PollDatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref PollDatabaseCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-postgresql
+      PubliclyAccessible: true
 
   # S3 Bucket to host single page app website
   WebSiteBucket:
@@ -160,3 +212,6 @@ Outputs:
   WebS3BucketName:
     Description: "S3 Bucket for hosting web frontend"
     Value: !Ref WebSiteBucket
+  RDSEndpoint:
+    Description: "The connection endpoint for the Aurora Cluster"
+    Value: !GetAtt PollDatabaseCluster.Endpoint.Address
