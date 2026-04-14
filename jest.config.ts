@@ -11,5 +11,5 @@ export default {
     collectCoverage: true,
     coverageDirectory: 'coverage',
     coverageProvider: 'v8',
-    testMatch: ['**/*.test.ts'],
+    testMatch: ['<rootDir>/functions/**/*.test.ts'],
 };
