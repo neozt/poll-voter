@@ -1,5 +1,7 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { type Context } from 'aws-lambda';
 import dataApiClient from 'data-api-client';
+import { Router } from '@aws-lambda-powertools/event-handler/http';
+import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -7,8 +9,18 @@ const db = dataApiClient({
     database: process.env.DB_NAME!,
 });
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    try {
+const app = new Router();
+
+app.use(
+    cors({
+        origin: '*',
+        maxAge: 300,
+    })
+);
+
+app.get(
+    '/polls',
+    async (reqCtx) => {
         const result = await db.query(`SELECT * FROM poll_overview WHERE is_active = true ORDER BY created_at DESC;`);
 
         // Group rows by poll
@@ -38,15 +50,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify(polls),
-        };
-    } catch (error) {
-        console.error('Error listing polls:', error);
-        return {
-            statusCode: 500,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify({ message: 'Internal Server Error' }),
+            body: polls,
         };
     }
-};
+);
+
+export const handler = async (event: unknown, context: Context) =>
+    app.resolve(event, context);
