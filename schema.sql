@@ -49,15 +49,17 @@ from option
 
 create or replace view poll_overview as
 select poll.poll_id,
-       poll.title              as poll_title,
-       poll.is_active,
+       poll.title                    as poll_title,
+       poll.description              as poll_description,
        poll.created_at,
        poll.created_by,
+       poll.is_active,
        option_with_tally.option_id,
-       option_with_tally.title as option_title,
-       coalesce(vote_count, 0) as vote_count
-from poll
+       option_with_tally.title       as option_title,
+       option_with_tally.description as option_description,
+       coalesce(vote_count, 0)       as vote_count
+from (select * from poll order by created_at desc limit 100) as poll
          left join poll_option po on poll.poll_id = po.poll_id
          left join option_with_tally on po.option_id = option_with_tally.option_id
-order by vote_count
+order by poll_id, vote_count desc
 ;

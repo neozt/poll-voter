@@ -9,17 +9,9 @@ const db = dataApiClient({
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const result = await db.query(`
-            SELECT 
-                p.poll_id, p.title as poll_title, p.description as poll_desc, p.created_by, p.created_at, p.is_active,
-                o.option_id, o.title as option_title, o.description as option_desc,
-                (SELECT COUNT(*) FROM vote v WHERE v.poll_id = p.poll_id AND v.selected_option_id = o.option_id) as vote_count
-            FROM poll p
-            JOIN poll_option po ON p.poll_id = po.poll_id
-            JOIN option o ON po.option_id = o.option_id
-            WHERE p.is_active = true
-            ORDER BY p.created_at DESC;
-        `);
+        const result = await db.query(
+            `SELECT * FROM poll_overview WHERE is_active = true ORDER BY created_at DESC;`
+        );
 
         // Group rows by poll
         const pollsMap: Record<string, any> = {};
@@ -29,7 +21,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 pollsMap[row.poll_id] = {
                     id: row.poll_id,
                     title: row.poll_title,
-                    description: row.poll_desc,
+                    description: row.poll_description,
                     created_by: row.created_by,
                     created_at: row.created_at,
                     is_active: row.is_active,
