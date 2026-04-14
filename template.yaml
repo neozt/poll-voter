@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Stock Price Streaming application
+
+Parameters:
+  Environment:
+    Type: String
+    Default: Local
+  ApiKeyExpiration:
+    Type: Number
+    Description: "The time, in seconds since the epoch, when the API key expires (max 365 days from now)"
+    Default: 1807602358 # April 13, 2027
+
+Resources:
+  StockPriceEventsApi:
+    Type: AWS::AppSync::Api
+    Properties:
+      Name: !Sub "${AWS::StackName}-StockApi"
+      EventConfig:
+        AuthProviders:
+          - AuthType: API_KEY
+        ConnectionAuthModes:
+          - AuthType: API_KEY
+        DefaultPublishAuthModes:
+          - AuthType: API_KEY
+        DefaultSubscribeAuthModes:
+          - AuthType: API_KEY
+
+  StockNamespace:
+    Type: AWS::AppSync::ChannelNamespace
+    Properties:
+      ApiId: !GetAtt StockPriceEventsApi.ApiId
+      Name: "stocks"
+      PublishAuthModes:
+        - AuthType: API_KEY
+      SubscribeAuthModes:
+        - AuthType: API_KEY
+
+  SimulatorNamespace:
+    Type: AWS::AppSync::ChannelNamespace
+    Properties:
+      ApiId: !GetAtt StockPriceEventsApi.ApiId
+      Name: "simulator"
+      PublishAuthModes:
+        - AuthType: API_KEY
+      SubscribeAuthModes:
+        - AuthType: API_KEY
+
+  StockApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt StockPriceEventsApi.ApiId
+      Description: "Key for frontend stock price subscription"
+      Expires: !Ref ApiKeyExpiration
+
+  # S3 Bucket to host frontend website
+  WebSiteBucket:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  WebSiteBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref WebSiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Id: "PolicyForCloudFrontPrivateContent"
+        Statement:
+          - Sid: "AllowCloudFrontServicePrincipal"
+            Effect: "Allow"
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: "s3:GetObject"
+            Resource: !Join [ "", [ "arn:aws:s3:::", !Ref WebSiteBucket, "/*" ] ]
+            Condition:
+              StringEquals:
+                "AWS:SourceArn": !Join [ "", [ "arn:aws:cloudfront::", !Ref "AWS::AccountId", ":distribution/", !Ref CloudFrontDistribution ] ]
+
+  # CloudFront Function to rewrite requests for subdirectory index.html files
+  CloudFrontIndexRewriterFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${AWS::StackName}-IndexRewriter"
+      AutoPublish: true
+      FunctionConfig:
+        Comment: "Rewrites subdirectory requests to /index.html"
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+            var request = event.request;
+            var uri = request.uri;
+            
+            // If the URI doesn't have a '.' (no extension), append 'index.html'
+            if (!uri.includes('.')) {
+                request.uri += 'index.html';
+            }
+
+            return request;
+        }
+
+  # CloudFront Distribution for hosting the frontend website
+  CloudFrontDistribution:
+    Type: "AWS::CloudFront::Distribution"
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt WebSiteBucket.RegionalDomainName
+            Id: "myS3Origin"
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        Enabled: true
+        DefaultRootObject: "index.html"
+        HttpVersion: "http2"
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - "DELETE"
+            - "GET"
+            - "HEAD"
+            - "OPTIONS"
+            - "PATCH"
+            - "POST"
+            - "PUT"
+          CachedMethods:
+            - "GET"
+            - "HEAD"
+          TargetOriginId: "myS3Origin"
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: "none"
+          ViewerProtocolPolicy: "allow-all"
+          MinTTL: 0
+          DefaultTTL: 3600
+          MaxTTL: 86400
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt CloudFrontIndexRewriterFunction.FunctionMetadata.FunctionARN
+        PriceClass: "PriceClass_200"
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+  CloudFrontOriginAccessControl:
+    Type: "AWS::CloudFront::OriginAccessControl"
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${WebSiteBucket} OAC"
+        OriginAccessControlOriginType: "s3"
+        SigningBehavior: "always"
+        SigningProtocol: "sigv4"
+
+Outputs:
+  CloudFrontDistributionId:
+    Description: "CloudFront Distribution ID for hosting web front end"
+    Value: !Ref CloudFrontDistribution
+  CloudFrontDistributionDomainName:
+    Description: "CloudFront Distribution Domain Name for accessing web front end"
+    Value: !GetAtt CloudFrontDistribution.DomainName
+  WebS3BucketName:
+    Description: "S3 Bucket for hosting web frontend"
+    Value: !Ref WebSiteBucket
+  AppSyncApiKey:
+    Description: "API Key for subscribing to stock updates"
+    Value: !GetAtt StockApiKey.ApiKey
+  AppSyncHttpEndpoint:
+    Description: "API Key for subscribing to stock updates"
+    Value: !GetAtt StockPriceEventsApi.Dns.Http
+  AppSyncRealtimeEndpoint:
+    Description: "API Key for subscribing to stock updates"
+    Value: !GetAtt StockPriceEventsApi.Dns.Realtime
