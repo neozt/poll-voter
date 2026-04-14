@@ -1,6 +1,9 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { type Context } from 'aws-lambda';
 import { randomUUID } from 'crypto';
 import dataApiClient from 'data-api-client';
+import { z } from "zod";
+import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
+import { Router } from "@aws-lambda-powertools/event-handler/http";
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -8,41 +11,50 @@ const db = dataApiClient({
     database: process.env.DB_NAME!,
 });
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    console.log('Received event:', event.body);
+const createPollSchema = z.object({
+    title: z.string(),
+    description: z.string().optional(),
+    options: z.array(
+        z.object({
+            title: z.string(),
+            description: z.string().optional(),
+        })
+    ),
+});
 
-    try {
-        const body = JSON.parse(event.body || '{}');
-        const { title, description, created_by, options } = body;
+const app = new Router();
 
-        if (!title || !options || !Array.isArray(options) || options.length < 1) {
-            return {
-                statusCode: 400,
-                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-                body: JSON.stringify({ message: 'Title and at least 2 options are required.' }),
-            };
-        }
+app.use(
+    cors({
+        origin: '*',
+        maxAge: 300,
+    })
+);
+
+app.post(
+    '/polls',
+    async (reqCtx) => {
+        const {title, description, options} = reqCtx.valid.req.body
 
         const pollId = randomUUID();
         const transaction = db.transaction();
 
         // Create poll
         transaction.query(
-            'INSERT INTO poll (poll_id, title, description, created_by) VALUES (:id::uuid, :title, :desc, :createdBy)',
-            { id: pollId, title, desc: description || null, createdBy: created_by || null },
+            'INSERT INTO poll (poll_id, title, description) VALUES (:id::uuid, :title, :desc)',
+            {id: pollId, title, desc: description || null},
         );
 
         // Create options
         for (const opt of options) {
             const optionId = randomUUID();
-            // Allow option to be passed as an object or a simple string
-            const optTitle = typeof opt === 'string' ? opt : opt.title;
-            const optDesc = typeof opt === 'string' ? null : opt.description || null;
+            const optTitle = opt.title;
+            const optDesc = opt.description;
 
             transaction.query('INSERT INTO option (option_id, title, description) VALUES (:id::uuid, :title, :desc)', {
                 id: optionId,
                 title: optTitle,
-                desc: optDesc,
+                desc: optDesc ?? null,
             });
             transaction.query('INSERT INTO poll_option (poll_id, option_id) VALUES (:pollId::uuid, :optId::uuid)', {
                 pollId,
@@ -54,16 +66,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         return {
             statusCode: 201,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify({ message: 'Poll created', poll_id: pollId }),
+            body: {message: 'Poll created', poll_id: pollId},
         };
-    } catch (error) {
-        console.error('Error creating poll:', error);
-
-        return {
-            statusCode: 500,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify({ message: 'Internal Server Error' }),
-        };
+    },
+    {
+        validation: {req: {body: createPollSchema}}
     }
-};
+);
+
+export const handler = async (event: unknown, context: Context) =>
+    app.resolve(event, context);
