@@ -1,6 +1,9 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type { Context } from 'aws-lambda';
 import dataApiClient from 'data-api-client';
 import { randomUUID } from 'crypto';
+import { NotFoundError, Router } from '@aws-lambda-powertools/event-handler/http';
+import { z } from 'zod';
+import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -8,37 +11,50 @@ const db = dataApiClient({
     database: process.env.DB_NAME!,
 });
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    console.log('Received event:', event.body);
+const addVoteSchema = z.object({
+    optionId: z.string(),
+});
 
-    try {
-        const body = JSON.parse(event.body || '{}');
-        const { pollId, optionId } = body;
+const app = new Router();
 
-        if (!pollId || !optionId) {
-            return {
-                statusCode: 400,
-                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-                body: JSON.stringify({ message: 'pollId or optionId is missing' }),
-            };
-        }
+app.use(
+    cors({
+        origin: '*',
+        maxAge: 300,
+    })
+);
+
+app.post(
+    '/polls/:pollId/votes',
+    async (reqCtx) => {
+        const pollId = reqCtx.params.pollId;
+        console.log("pollId", pollId);
+        const optionId = reqCtx.valid.req.body.optionId;
+        console.log("optionId", optionId);
 
         const voteId = randomUUID();
 
         const transaction = db
             .transaction()
-            .query(`SELECT COUNT(*) FROM poll_option WHERE poll_id = :pollId::uuid and option_id = :optionId::uuid`, {
+            .query(`
+                SELECT COUNT(*)
+                FROM poll_option
+                WHERE poll_id = :pollId::uuid
+                  and option_id = :optionId::uuid
+            `, {
                 pollId,
                 optionId,
             })
             .query((result) => {
                 if (result.records[0].count <= 0) {
-                    throw new Error('pollId or optionId not found.');
+                    throw new NotFoundError("pollId or optionId not found.");
                 }
 
                 return [
-                    `INSERT INTO vote(vote_id, poll_id, selected_option_id) VALUES (:voteId::uuid, :pollId::uuid, :optionId::uuid) RETURNING vote_id`,
-                    { voteId, pollId, optionId },
+                    `INSERT INTO vote(vote_id, poll_id, selected_option_id)
+                     VALUES (:voteId::uuid, :pollId::uuid, :optionId::uuid)
+                     RETURNING vote_id`,
+                    {voteId, pollId, optionId},
                 ];
             });
 
@@ -46,16 +62,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         return {
             statusCode: 201,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify({ message: 'Vote casted', voteId }),
+            body: {message: 'Vote casted', voteId},
         };
-    } catch (error) {
-        console.error('Error adding vote:', error);
-
-        return {
-            statusCode: 500,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify({ message: 'Internal Server Error' }),
-        };
+    },
+    {
+        validation: {req: {body: addVoteSchema}}
     }
-};
+);
+
+export const handler = async (event: unknown, context: Context) =>
+    app.resolve(event, context);

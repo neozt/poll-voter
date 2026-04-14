@@ -4,8 +4,10 @@
     "version": "0.0.1",
     "private": true,
     "dependencies": {
+        "@aws-lambda-powertools/event-handler": "^2.32.0",
         "@aws-sdk/client-rds-data": "^3.1030.0",
-        "data-api-client": "^2.1.4"
+        "data-api-client": "^2.1.4",
+        "zod": "^4.3.6"
     },
     "devDependencies": {
         "@jest/globals": "^29.2.0",

@@ -150,7 +150,7 @@ Resources:
         SubmitApi:
           Type: Api
           Properties:
-            Path: /votes
+            Path: /polls/{pollId}/votes
             Method: post
             RestApiId: !Ref PollApi
     Metadata: # Manage esbuild properties
