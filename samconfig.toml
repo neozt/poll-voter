@@ -52,7 +52,7 @@ stack_name = "poll-voter-app-dev"
 resolve_s3 = true
 s3_prefix = "poll-voter-app-dev"
 region = "ap-southeast-1"
-confirm_changeset = false
+confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 image_repositories = []
 parameter_overrides = "Environment=Dev"
