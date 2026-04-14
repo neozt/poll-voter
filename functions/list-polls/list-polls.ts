@@ -4,14 +4,12 @@ import dataApiClient from 'data-api-client';
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
     resourceArn: process.env.DB_CLUSTER_ARN!,
-    database: process.env.DB_NAME!
+    database: process.env.DB_NAME!,
 });
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const result = await db.query(
-            `SELECT * FROM poll_overview WHERE is_active = true ORDER BY created_at DESC;`
-        );
+        const result = await db.query(`SELECT * FROM poll_overview WHERE is_active = true ORDER BY created_at DESC;`);
 
         // Group rows by poll
         const pollsMap: Record<string, any> = {};
@@ -25,14 +23,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                     created_by: row.created_by,
                     created_at: row.created_at,
                     is_active: row.is_active,
-                    options: []
+                    options: [],
                 };
             }
             pollsMap[row.poll_id].options.push({
                 id: row.option_id,
                 title: row.option_title,
                 description: row.option_desc,
-                vote_count: row.vote_count
+                vote_count: row.vote_count,
             });
         }
 
@@ -40,15 +38,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         return {
             statusCode: 200,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
             body: JSON.stringify(polls),
         };
     } catch (error) {
         console.error('Error listing polls:', error);
         return {
             statusCode: 500,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-            body: JSON.stringify({ message: "Internal Server Error" }),
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ message: 'Internal Server Error' }),
         };
     }
 };
