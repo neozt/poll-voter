@@ -92,7 +92,7 @@
       <div class="space-y-3">
         @for (option of poll()!.options; track option.id) {
           <div
-            class="relative bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 cursor-pointer group"
+            class="relative bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 cursor-pointer group select-none"
             [class.border-indigo-300]="votingOptionId() !== option.id"
             [class.border-indigo-500]="votingOptionId() === option.id"
             [class.hover:border-indigo-500]="votingOptionId() === null"
