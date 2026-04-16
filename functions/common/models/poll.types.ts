@@ -1,3 +1,27 @@
+export type Poll = {
+    poll_id: string;
+    title: string;
+    description: string;
+    created_by: string;
+    created_at: Date;
+    is_active: boolean;
+}
+
+export type Option = {
+    option_id: string;
+    poll_id: string;
+    title: string;
+    description: string;
+}
+
+export type Vote = {
+    vote_id: string;
+    poll_id: string;
+    selected_option_id: string;
+    voted_by: string;
+    voted_at: Date;
+}
+
 export type PollOverviewSqlResult = {
     poll_id: string;
     poll_title: string;

@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { NotFoundError, Router } from '@aws-lambda-powertools/event-handler/http';
 import { z } from 'zod';
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
+import { Vote } from "../common/models/poll.types";
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -13,6 +14,7 @@ const db = dataApiClient({
 
 const bodySchema = z.object({
     optionId: z.string(),
+    votedBy: z.string(),
 });
 
 const pathSchema = z.object({
@@ -31,91 +33,101 @@ app.use(
 app.post(
     '/polls/:pollId/votes',
     async (reqCtx) => {
-        const pollId = reqCtx.params.pollId;
-        const optionId = reqCtx.valid.req.body.optionId;
+        const {pollId} = reqCtx.valid.req.path;
+        const {optionId, votedBy} = reqCtx.valid.req.body;
 
         const voteId = randomUUID();
 
-        const transaction = db
-            .transaction()
-            .query(
-                `
-                SELECT COUNT(*)
-                FROM poll_option
+        const selectOptionResult = await db.query<Vote>(
+            `
+                SELECT *
+                FROM option
                 WHERE poll_id = :pollId::uuid
                   and option_id = :optionId::uuid
             `,
-                {
-                    pollId,
-                    optionId,
-                },
-            )
-            .query((result) => {
-                if (result.records[0].count <= 0) {
-                    throw new NotFoundError('pollId or optionId not found.');
-                }
-
-                return [
-                    `INSERT INTO vote(vote_id, poll_id, selected_option_id)
-                     VALUES (:voteId::uuid, :pollId::uuid, :optionId::uuid)
-                     RETURNING vote_id`,
-                    { voteId, pollId, optionId },
-                ];
-            });
-
-        await transaction.commit();
-
-        const currentTallyQueryResult = await db.query<{
-            option_id: string;
-            vote_count: number;
-            current_timestamp: Date;
-        }>(
-            `select option_id, vote_count, current_timestamp from poll_overview where poll_id = :pollId::uuid`,
-            { pollId }
+            {pollId, optionId},
         );
 
-        const voteTally = currentTallyQueryResult.records
-            ?.map((row) => ([row.option_id, row.vote_count] as [string, number]))
-            ?? [];
-
-        const appSyncMessage = {
-            pollId,
-            voteTally,
-            timestamp: currentTallyQueryResult?.records?.[0]?.current_timestamp,
-        };
-
-        try {
-            const endpoint = process.env.APPSYNC_ENDPOINT;
-            const apiKey = process.env.APPSYNC_API_KEY;
-
-            const response = await fetch(`https://${endpoint!}/event`, {
-                method: 'POST',
-                headers: {
-                    'x-api-key': apiKey!,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    channel: `polls/${pollId}`,
-                    events: [JSON.stringify(appSyncMessage)],
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`AppSync Publish Error (${response.status}):`, errorText);
-            }
-        } catch (error) {
-            console.error('Failed to publish to AppSync', error);
+        if (selectOptionResult.records!.length === 0) {
+            throw new NotFoundError('pollId or optionId not found.');
         }
+
+        await db.query<{ vote_id: string; }>(
+            `
+                INSERT INTO vote(vote_id, poll_id, selected_option_id, voted_by)
+                VALUES (:voteId::uuid, :pollId::uuid, :optionId::uuid, :votedBy)
+            `,
+            {voteId, pollId, optionId, votedBy},
+        )
+
+        await publishUpdatedTally(pollId, optionId, votedBy);
 
         return {
             statusCode: 201,
-            body: { message: 'Vote casted', voteId },
+            body: {message: 'Vote casted', voteId},
         };
     },
     {
-        validation: { req: { body: bodySchema, path: pathSchema } },
+        validation: {req: {body: bodySchema, path: pathSchema}},
     },
 );
 
 export const handler = async (event: unknown, context: Context) => app.resolve(event, context);
+
+/**
+ * Fetches latest vote tally and publish to AppSync Events
+ * @param pollId the poll for which the vote was cast
+ */
+async function publishUpdatedTally(pollId: string, optionId: string, votedBy: any) {
+    const selectPollOverviewResult = await db.query<{
+        option_id: string;
+        vote_count: number;
+        current_timestamp: Date;
+    }>(
+        `
+            select option_id, vote_count, current_timestamp
+            from poll_overview
+            where poll_id = :pollId::uuid
+        `,
+        {pollId}
+    );
+
+    const voteTally = selectPollOverviewResult.records!
+        .map((row) => (
+            [row.option_id, row.vote_count] as [string, number])
+        ) ?? [];
+
+    const appSyncMessage = {
+        pollId,
+        voteTally,
+        timestamp: selectPollOverviewResult.records![0].current_timestamp,
+        latestVote: {
+            optionId,
+            votedBy,
+        }
+    };
+
+    try {
+        const endpoint = process.env.APPSYNC_ENDPOINT;
+        const apiKey = process.env.APPSYNC_API_KEY;
+
+        const response = await fetch(`https://${endpoint!}/event`, {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey!,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                channel: `polls/${pollId}`,
+                events: [JSON.stringify(appSyncMessage)],
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`AppSync Publish Error (${response.status}):`, errorText);
+        }
+    } catch (error) {
+        console.error('Failed to publish to AppSync', error);
+    }
+}

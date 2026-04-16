@@ -38,6 +38,7 @@ app.get('/polls', async (reqCtx) => {
     const polls = Object.values(groupByPollId)
         .map(convertToPollDetailsDto)
         .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+
     return {
         statusCode: 200,
         body: JSON.stringify(polls),

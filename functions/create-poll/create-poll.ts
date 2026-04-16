@@ -41,27 +41,24 @@ app.post(
         const pollId = randomUUID();
         const transaction = db.transaction();
 
-        // Create poll
+        // Insert poll
         transaction.query('INSERT INTO poll (poll_id, title, description) VALUES (:id::uuid, :title, :desc)', {
             id: pollId,
             title,
             desc: description || null,
         });
 
-        // Create options
         for (const opt of options) {
+            // Insert options
             const optionId = randomUUID();
             const optTitle = opt.title;
             const optDesc = opt.description;
 
-            transaction.query('INSERT INTO option (option_id, title, description) VALUES (:id::uuid, :title, :desc)', {
+            transaction.query('INSERT INTO option (option_id, poll_id, title, description) VALUES (:id::uuid, :pollId::uuid, :title, :desc)', {
+                pollId,
                 id: optionId,
                 title: optTitle,
                 desc: optDesc ?? null,
-            });
-            transaction.query('INSERT INTO poll_option (poll_id, option_id) VALUES (:pollId::uuid, :optId::uuid)', {
-                pollId,
-                optId: optionId,
             });
         }
 
