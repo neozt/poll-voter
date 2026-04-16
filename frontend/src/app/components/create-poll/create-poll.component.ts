@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { PollService, CreatePollRequest } from '../../services/poll.service';
 
 import { NzFormModule } from 'ng-zorro-antd/form';
@@ -19,6 +19,7 @@ import { NzAlertModule } from 'ng-zorro-antd/alert';
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     ReactiveFormsModule,
     NzFormModule,
     NzInputModule,
