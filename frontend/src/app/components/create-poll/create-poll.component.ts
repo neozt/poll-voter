@@ -85,7 +85,7 @@ export class CreatePollComponent {
       this.pollService.createPoll(request).subscribe({
         next: (res) => {
           this.isSubmitting.set(false);
-          this.createdPollId.set(res.poll_id);
+          this.createdPollId.set(res.pollId);
         },
         error: (err) => {
           this.message.error('Failed to create poll. Please try again.');

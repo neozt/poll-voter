@@ -23,16 +23,16 @@ app.use(
 app.get('/polls', async (reqCtx) => {
     const result = await db.query<PollOverviewResult>(
         `
-            SELECT poll_id            as pollId,
-                   poll_title         as pollTitle,
-                   poll_description   as pollDescription,
-                   created_by         as createdBy,
-                   created_at         as createdAt,
-                   is_active          as isActive,
-                   option_id          as optionId,
-                   option_title       as optionTitle,
-                   option_description as optionDescription,
-                   vote_count         as voteCount
+            SELECT poll_id            as "pollId",
+                   poll_title         as "pollTitle",
+                   poll_description   as "pollDescription",
+                   created_by         as "createdBy",
+                   created_at         as "createdAt",
+                   is_active          as "isActive",
+                   option_id          as "optionId",
+                   option_title       as "optionTitle",
+                   option_description as "optionDescription",
+                   vote_count         as "voteCount"
             FROM poll_overview
             WHERE is_active = true
             ORDER BY created_at DESC;

@@ -40,10 +40,10 @@ app.post(
 
         const selectOptionResult = await db.query<OptionRecord>(
             `
-                SELECT option_id   as optionId,
-                       poll_id     as pollId,
-                       title       as title,
-                       description as description
+                SELECT option_id   as "optionId",
+                       poll_id     as "pollId",
+                       title       as "title",
+                       description as "description"
                 FROM option
                 WHERE poll_id = :pollId::uuid
                   and option_id = :optionId::uuid
@@ -55,7 +55,7 @@ app.post(
             throw new NotFoundError('pollId or optionId not found.');
         }
 
-        await db.query<{ vote_id: string; }>(
+        await db.query(
             `
                 INSERT INTO vote(vote_id, poll_id, selected_option_id, voted_by)
                 VALUES (:voteId::uuid, :pollId::uuid, :optionId::uuid, :votedBy)
@@ -83,12 +83,14 @@ export const handler = async (event: unknown, context: Context) => app.resolve(e
  */
 async function publishUpdatedTally(pollId: string, optionId: string, votedBy: any) {
     const selectPollOverviewResult = await db.query<{
-        option_id: string;
-        vote_count: number;
-        current_timestamp: Date;
+        optionId: string;
+        voteCount: number;
+        currentTimestamp: Date;
     }>(
         `
-            select option_id, vote_count, current_timestamp
+            select option_id as "optionId", 
+                   vote_count as "voteCount", 
+                   current_timestamp as "currentTimestamp"
             from poll_overview
             where poll_id = :pollId::uuid
         `,
@@ -97,13 +99,13 @@ async function publishUpdatedTally(pollId: string, optionId: string, votedBy: an
 
     const voteTally = selectPollOverviewResult.records!
         .map((row) => (
-            [row.option_id, row.vote_count] as [string, number])
+            [row.optionId, row.voteCount] as [string, number])
         ) ?? [];
 
     const appSyncMessage = {
         pollId,
         voteTally,
-        timestamp: selectPollOverviewResult.records![0].current_timestamp,
+        timestamp: selectPollOverviewResult.records![0].currentTimestamp,
         latestVote: {
             optionId,
             votedBy,

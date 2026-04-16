@@ -1,5 +1,5 @@
 export type PollRecord = {
-    poll_id: string;
+    pollId: string;
     title: string;
     description: string;
     createdBy: string;
@@ -18,8 +18,8 @@ export type VoteRecord = {
     voteId: string;
     pollId: string;
     selectedOptionId: string;
-    voted_by: string;
-    voted_at: Date;
+    votedBy: string;
+    votedAt: Date;
 }
 
 export type PollOverviewResult = {
