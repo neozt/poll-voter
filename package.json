@@ -27,7 +27,7 @@
     },
     "scripts": {
         "test": "jest",
-        "lint": "eslint **/*.ts --quiet --fix",
+        "lint": "eslint \"**/*.ts\" --quiet --fix && prettier --write \"**/*.{html,css}\"",
         "compile": "tsc"
     }
 }
