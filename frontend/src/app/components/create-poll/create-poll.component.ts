@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -57,21 +57,23 @@ import { NzTypographyModule } from 'ng-zorro-antd/typography';
           </div>
 
           <div formArrayName="options" class="space-y-4">
-            <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="p-4 bg-gray-50 rounded-xl border border-gray-200 relative group transition-all hover:shadow-md">
-              
-              <button 
-                *ngIf="options.length > 2"
-                type="button" 
-                class="absolute -right-3 -top-3 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity border-none cursor-pointer z-10"
-                (click)="removeOption(i)"
-              >
-                <span nz-icon nzType="close" nzTheme="outline"></span>
-              </button>
+            @for (option of options.controls; track $index) {
+              <div [formGroupName]="$index" class="p-4 bg-gray-50 rounded-xl border border-gray-200 relative group transition-all hover:shadow-md">
+                
+                @if (options.length > 2) {
+                  <button 
+                    type="button" 
+                    class="absolute -right-3 -top-3 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity border-none cursor-pointer z-10"
+                    (click)="removeOption($index)"
+                  >
+                    <span nz-icon nzType="close" nzTheme="outline"></span>
+                  </button>
+                }
 
               <nz-form-item class="mb-3">
                 <nz-form-control nzErrorTip="Option title is required!">
                   <nz-input-group nzSize="large">
-                    <input type="text" nz-input formControlName="title" placeholder="Option {{ i + 1 }}" class="rounded-md" />
+                    <input type="text" nz-input formControlName="title" placeholder="Option {{ $index + 1 }}" class="rounded-md" />
                   </nz-input-group>
                 </nz-form-control>
               </nz-form-item>
@@ -82,7 +84,8 @@ import { NzTypographyModule } from 'ng-zorro-antd/typography';
                 </nz-form-control>
               </nz-form-item>
               
-            </div>
+              </div>
+            }
           </div>
 
           <div class="mt-6 flex justify-center">
@@ -105,7 +108,7 @@ import { NzTypographyModule } from 'ng-zorro-antd/typography';
                 nzType="primary" 
                 nzSize="large" 
                 class="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 border-none shadow-md hover:shadow-lg transition-all" 
-                [nzLoading]="isSubmitting"
+                [nzLoading]="isSubmitting()"
              >
                Launch Poll
              </button>
@@ -122,7 +125,7 @@ export class CreatePollComponent {
   private message = inject(NzMessageService);
   private router = inject(Router);
 
-  isSubmitting = false;
+  isSubmitting = signal(false);
 
   pollForm: FormGroup = this.fb.group({
     title: [null, [Validators.required, Validators.maxLength(200)]],
@@ -165,19 +168,19 @@ export class CreatePollComponent {
 
   submitForm(): void {
     if (this.pollForm.valid) {
-      this.isSubmitting = true;
+      this.isSubmitting.set(true);
       const request: CreatePollRequest = this.pollForm.value;
       
       this.pollService.createPoll(request).subscribe({
         next: () => {
           this.message.success('Poll created successfully!');
-          this.isSubmitting = false;
+          this.isSubmitting.set(false);
           this.router.navigate(['/']); // redirect to list
         },
         error: (err) => {
           this.message.error('Failed to create poll. Please try again.');
           console.error(err);
-          this.isSubmitting = false;
+          this.isSubmitting.set(false);
         }
       });
     } else {
