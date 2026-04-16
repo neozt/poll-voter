@@ -2,6 +2,8 @@ import { type Context } from 'aws-lambda';
 import dataApiClient from 'data-api-client';
 import { Router } from '@aws-lambda-powertools/event-handler/http';
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
+import { PollOverviewSqlResult } from "../common/models/poll.types";
+import { convertToPollDetailsDto } from "../common/mappers/poll.mappers";
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -21,36 +23,28 @@ app.use(
 app.get(
     '/polls',
     async (reqCtx) => {
-        const result = await db.query(`SELECT * FROM poll_overview WHERE is_active = true ORDER BY created_at DESC;`);
+        const result = await db.query<PollOverviewSqlResult>(
+            `SELECT * FROM poll_overview WHERE is_active = true ORDER BY created_at DESC;`
+        );
 
         // Group rows by poll
-        const pollsMap: Record<string, any> = {};
+        const groupByPollId: Record<string, PollOverviewSqlResult[]> = {};
 
         for (const row of result.records ?? []) {
-            if (!pollsMap[row.poll_id]) {
-                pollsMap[row.poll_id] = {
-                    id: row.poll_id,
-                    title: row.poll_title,
-                    description: row.poll_description,
-                    created_by: row.created_by,
-                    created_at: row.created_at,
-                    is_active: row.is_active,
-                    options: [],
-                };
+            if (!groupByPollId[row.poll_id]) {
+                groupByPollId[row.poll_id] = []
             }
-            pollsMap[row.poll_id].options.push({
-                id: row.option_id,
-                title: row.option_title,
-                description: row.option_desc,
-                vote_count: row.vote_count,
-            });
+            groupByPollId[row.poll_id].push(row);
         }
 
-        const polls = Object.values(pollsMap);
+        const polls = Object.values(groupByPollId)
+            .map(convertToPollDetailsDto)
+            .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+        ;
 
         return {
             statusCode: 200,
-            body: polls,
+            body: JSON.stringify(polls),
         };
     }
 );
