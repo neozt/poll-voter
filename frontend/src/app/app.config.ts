@@ -7,6 +7,21 @@ import { registerLocaleData } from '@angular/common';
 import en from '@angular/common/locales/en';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideNzIcons } from 'ng-zorro-antd/icon';
+import {
+  PlusCircleOutline,
+  LoginOutline,
+  SearchOutline,
+  CheckCircleOutline,
+  EyeOutline,
+  CopyOutline,
+  QuestionCircleOutline,
+  CloseOutline,
+  PlusOutline,
+  ArrowLeftOutline,
+  LoadingOutline,
+  InfoCircleOutline
+} from '@ant-design/icons-angular/icons';
 
 registerLocaleData(en);
 
@@ -16,6 +31,20 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes), 
     provideNzI18n(en_US),
     provideHttpClient(withFetch()),
-    provideAnimations()
+    provideAnimations(),
+    provideNzIcons([
+      PlusCircleOutline,
+      LoginOutline,
+      SearchOutline,
+      CheckCircleOutline,
+      EyeOutline,
+      CopyOutline,
+      QuestionCircleOutline,
+      CloseOutline,
+      PlusOutline,
+      ArrowLeftOutline,
+      LoadingOutline,
+      InfoCircleOutline
+    ])
   ],
 };
