@@ -9,7 +9,7 @@ export type PollOverviewSqlResult = {
     option_title: string;
     option_desc: string;
     vote_count: number;
-}
+};
 
 export type PollDetails = {
     id: string;
@@ -19,11 +19,11 @@ export type PollDetails = {
     created_at: Date;
     is_active: boolean;
     options: OptionDetails[];
-}
+};
 
 export type OptionDetails = {
     id: string;
     title: string;
     description: string;
     vote_count: number;
-}
+};

@@ -25,7 +25,7 @@ app.use(
     cors({
         origin: '*',
         maxAge: 300,
-    })
+    }),
 );
 
 app.post(
@@ -38,25 +38,28 @@ app.post(
 
         const transaction = db
             .transaction()
-            .query(`
+            .query(
+                `
                 SELECT COUNT(*)
                 FROM poll_option
                 WHERE poll_id = :pollId::uuid
                   and option_id = :optionId::uuid
-            `, {
-                pollId,
-                optionId,
-            })
+            `,
+                {
+                    pollId,
+                    optionId,
+                },
+            )
             .query((result) => {
                 if (result.records[0].count <= 0) {
-                    throw new NotFoundError("pollId or optionId not found.");
+                    throw new NotFoundError('pollId or optionId not found.');
                 }
 
                 return [
                     `INSERT INTO vote(vote_id, poll_id, selected_option_id)
                      VALUES (:voteId::uuid, :pollId::uuid, :optionId::uuid)
                      RETURNING vote_id`,
-                    {voteId, pollId, optionId},
+                    { voteId, pollId, optionId },
                 ];
             });
 
@@ -64,13 +67,12 @@ app.post(
 
         return {
             statusCode: 201,
-            body: {message: 'Vote casted', voteId},
+            body: { message: 'Vote casted', voteId },
         };
     },
     {
-        validation: {req: {body: bodySchema, path: pathSchema}}
-    }
+        validation: { req: { body: bodySchema, path: pathSchema } },
+    },
 );
 
-export const handler = async (event: unknown, context: Context) =>
-    app.resolve(event, context);
+export const handler = async (event: unknown, context: Context) => app.resolve(event, context);

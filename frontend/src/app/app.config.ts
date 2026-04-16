@@ -20,15 +20,15 @@ import {
   PlusOutline,
   ArrowLeftOutline,
   LoadingOutline,
-  InfoCircleOutline
+  InfoCircleOutline,
 } from '@ant-design/icons-angular/icons';
 
 registerLocaleData(en);
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(), 
-    provideRouter(routes), 
+    provideBrowserGlobalErrorListeners(),
+    provideRouter(routes),
     provideNzI18n(en_US),
     provideHttpClient(withFetch()),
     provideAnimations(),
@@ -44,7 +44,7 @@ export const appConfig: ApplicationConfig = {
       PlusOutline,
       ArrowLeftOutline,
       LoadingOutline,
-      InfoCircleOutline
-    ])
+      InfoCircleOutline,
+    ]),
   ],
 };

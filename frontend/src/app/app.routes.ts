@@ -7,6 +7,5 @@ export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'create', component: CreatePollComponent },
   { path: 'poll/:id', component: PollDetailComponent },
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: '' },
 ];
-

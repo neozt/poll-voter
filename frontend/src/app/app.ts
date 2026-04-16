@@ -13,8 +13,12 @@ import { NzLayoutModule } from 'ng-zorro-antd/layout';
       </nz-content>
     </nz-layout>
   `,
-  styles: [`
-    :host { display: block; }
-  `]
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class App {}

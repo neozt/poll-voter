@@ -30,7 +30,7 @@ export interface CreatePollRequest {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class PollService {
   private http = inject(HttpClient);
@@ -44,12 +44,12 @@ export class PollService {
     return this.http.get<Poll>(`${this.apiUrl}/polls/${pollId}`);
   }
 
-  createPoll(poll: CreatePollRequest): Observable<{ message: string, poll_id: string }> {
-    return this.http.post<{ message: string, poll_id: string }>(`${this.apiUrl}/polls`, poll);
+  createPoll(poll: CreatePollRequest): Observable<{ message: string; poll_id: string }> {
+    return this.http.post<{ message: string; poll_id: string }>(`${this.apiUrl}/polls`, poll);
   }
 
-  addVote(pollId: string, optionId: string): Observable<{ message: string, voteId: string }> {
-    return this.http.post<{ message: string, voteId: string }>(
+  addVote(pollId: string, optionId: string): Observable<{ message: string; voteId: string }> {
+    return this.http.post<{ message: string; voteId: string }>(
       `${this.apiUrl}/polls/${pollId}/votes`,
       { optionId }
     );

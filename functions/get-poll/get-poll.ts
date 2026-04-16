@@ -4,8 +4,7 @@ import { NotFoundError, Router } from '@aws-lambda-powertools/event-handler/http
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
 import { PollOverviewSqlResult } from '../common/models/poll.types';
 import { z } from 'zod';
-import { convertToPollDetailsDto } from "../common/mappers/poll.mappers";
-
+import { convertToPollDetailsDto } from '../common/mappers/poll.mappers';
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -19,7 +18,7 @@ app.use(
     cors({
         origin: '*',
         maxAge: 300,
-    })
+    }),
 );
 
 const pathSchema = z.object({
@@ -33,24 +32,23 @@ app.get(
 
         const result = await db.query<PollOverviewSqlResult>(
             `SELECT * FROM poll_overview WHERE poll_id = :pollId::uuid`,
-            {pollId}
+            { pollId },
         );
 
         if (!result.records || result.records.length == 0) {
-            throw new NotFoundError(`Poll not found.`, undefined, {pollId});
+            throw new NotFoundError(`Poll not found.`, undefined, { pollId });
         }
 
         const pollDetails = convertToPollDetailsDto(result.records);
 
         return {
             statusCode: 200,
-            body: JSON.stringify(pollDetails)
+            body: JSON.stringify(pollDetails),
         };
     },
     {
-        validation: {req: {path: pathSchema}}
-    }
+        validation: { req: { path: pathSchema } },
+    },
 );
 
-export const handler = async (event: unknown, context: Context) =>
-    app.resolve(event, context);
+export const handler = async (event: unknown, context: Context) => app.resolve(event, context);
