@@ -160,6 +160,45 @@ Resources:
         Target: es2020
         Sourcemap: true
 
+  GetPollFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-GetPollFunction"
+      CodeUri: functions/get-poll
+      Handler: get-poll.handler
+      Runtime: nodejs24.x
+      Timeout: 10
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref PollDBSecret
+          DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
+          DB_NAME: "pollvoterdb"
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref PollDBSecret
+            - Effect: Allow
+              Action:
+                - rds-data:ExecuteStatement
+              Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
+      Events:
+        SubmitApi:
+          Type: Api
+          Properties:
+            Path: /polls/{pollId}
+            Method: get
+            RestApiId: !Ref PollApi
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+
   # Security Group for Database Access
   PollDatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup

@@ -58,8 +58,8 @@ select poll.poll_id,
        option_with_tally.title       as option_title,
        option_with_tally.description as option_description,
        coalesce(vote_count, 0)       as vote_count
-from (select * from poll order by created_at desc limit 100) as poll
+from poll
          left join poll_option po on poll.poll_id = po.poll_id
          left join option_with_tally on po.option_id = option_with_tally.option_id
-order by poll_id, vote_count desc
+order by poll_id, option_id desc
 ;
