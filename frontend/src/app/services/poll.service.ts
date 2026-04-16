@@ -7,16 +7,16 @@ export interface PollOption {
   id: string;
   title: string;
   description?: string;
-  vote_count?: number;
+  voteCount: number;
 }
 
 export interface Poll {
   id: string;
   title: string;
   description?: string;
-  created_by?: string;
-  created_at?: string;
-  is_active?: boolean;
+  createdBy?: string;
+  createdAt?: string;
+  isActive?: boolean;
   options: PollOption[];
 }
 
@@ -44,8 +44,8 @@ export class PollService {
     return this.http.get<Poll>(`${this.apiUrl}/polls/${pollId}`);
   }
 
-  createPoll(poll: CreatePollRequest): Observable<{ message: string; poll_id: string }> {
-    return this.http.post<{ message: string; poll_id: string }>(`${this.apiUrl}/polls`, poll);
+  createPoll(poll: CreatePollRequest): Observable<{ message: string; pollId: string }> {
+    return this.http.post<{ message: string; pollId: string }>(`${this.apiUrl}/polls`, poll);
   }
 
   addVote(pollId: string, optionId: string, votedBy: string): Observable<{ message: string; voteId: string }> {

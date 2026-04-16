@@ -1,23 +1,23 @@
-import { OptionDetails, PollDetails, PollOverviewSqlResult } from '../models/poll.types';
+import { OptionDetails, PollDetails, PollOverviewResult } from '../models/poll.types';
 
-export function convertToPollDetailsDto(pollOverviewResults: PollOverviewSqlResult[]): PollDetails {
+export function convertToPollDetailsDto(pollOverviewResults: PollOverviewResult[]): PollDetails {
     if (!pollOverviewResults || pollOverviewResults.length == 0) {
         throw new Error('pollOverviewResults cannot be empty');
     }
 
     return {
-        id: pollOverviewResults[0].poll_id,
-        title: pollOverviewResults[0].poll_title,
-        description: pollOverviewResults[0].poll_description,
-        created_by: pollOverviewResults[0].created_by,
-        created_at: pollOverviewResults[0].created_at,
-        is_active: pollOverviewResults[0].is_active,
+        id: pollOverviewResults[0].pollId,
+        title: pollOverviewResults[0].pollTitle,
+        description: pollOverviewResults[0].pollDescription,
+        createdBy: pollOverviewResults[0].createdBy,
+        createdAt: pollOverviewResults[0].createdAt,
+        isActive: pollOverviewResults[0].isActive,
         options: pollOverviewResults.map((row) => {
             return {
-                id: row.option_id,
-                title: row.option_title,
-                description: row.option_desc,
-                vote_count: row.vote_count,
+                id: row.optionId,
+                title: row.optionTitle,
+                description: row.optionDescription,
+                voteCount: row.voteCount,
             } as OptionDetails;
         }),
     };

@@ -2,7 +2,7 @@ import { type Context } from 'aws-lambda';
 import dataApiClient from 'data-api-client';
 import { Router } from '@aws-lambda-powertools/event-handler/http';
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
-import { PollOverviewSqlResult } from '../common/models/poll.types';
+import { PollOverviewResult } from '../common/models/poll.types';
 import { convertToPollDetailsDto } from '../common/mappers/poll.mappers';
 
 const db = dataApiClient({
@@ -21,23 +21,37 @@ app.use(
 );
 
 app.get('/polls', async (reqCtx) => {
-    const result = await db.query<PollOverviewSqlResult>(
-        `SELECT * FROM poll_overview WHERE is_active = true ORDER BY created_at DESC;`,
+    const result = await db.query<PollOverviewResult>(
+        `
+            SELECT poll_id            as pollId,
+                   poll_title         as pollTitle,
+                   poll_description   as pollDescription,
+                   created_by         as createdBy,
+                   created_at         as createdAt,
+                   is_active          as isActive,
+                   option_id          as optionId,
+                   option_title       as optionTitle,
+                   option_description as optionDescription,
+                   vote_count         as voteCount
+            FROM poll_overview
+            WHERE is_active = true
+            ORDER BY created_at DESC;
+        `,
     );
 
     // Group rows by poll
-    const groupByPollId: Record<string, PollOverviewSqlResult[]> = {};
+    const groupByPollId: Record<string, PollOverviewResult[]> = {};
 
     for (const row of result.records ?? []) {
-        if (!groupByPollId[row.poll_id]) {
-            groupByPollId[row.poll_id] = [];
+        if (!groupByPollId[row.pollId]) {
+            groupByPollId[row.pollId] = [];
         }
-        groupByPollId[row.poll_id].push(row);
+        groupByPollId[row.pollId].push(row);
     }
 
     const polls = Object.values(groupByPollId)
         .map(convertToPollDetailsDto)
-        .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     return {
         statusCode: 200,

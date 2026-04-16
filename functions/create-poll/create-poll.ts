@@ -42,11 +42,14 @@ app.post(
         const transaction = db.transaction();
 
         // Insert poll
-        transaction.query('INSERT INTO poll (poll_id, title, description) VALUES (:id::uuid, :title, :desc)', {
-            id: pollId,
-            title,
-            desc: description || null,
-        });
+        transaction.query(
+            'INSERT INTO poll (poll_id, title, description) VALUES (:id::uuid, :title, :desc)',
+            {
+                title,
+                id: pollId,
+                desc: description || null,
+            }
+        );
 
         for (const opt of options) {
             // Insert options
@@ -54,19 +57,22 @@ app.post(
             const optTitle = opt.title;
             const optDesc = opt.description;
 
-            transaction.query('INSERT INTO option (option_id, poll_id, title, description) VALUES (:id::uuid, :pollId::uuid, :title, :desc)', {
-                pollId,
-                id: optionId,
-                title: optTitle,
-                desc: optDesc ?? null,
-            });
+            transaction.query(
+                'INSERT INTO option (option_id, poll_id, title, description) VALUES (:id::uuid, :pollId::uuid, :title, :desc)',
+                {
+                    pollId,
+                    id: optionId,
+                    title: optTitle,
+                    desc: optDesc ?? null,
+                }
+            );
         }
 
         await transaction.commit();
 
         return {
             statusCode: 201,
-            body: { message: 'Poll created', poll_id: pollId },
+            body: { message: 'Poll created', pollId },
         };
     },
     {

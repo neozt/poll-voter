@@ -103,7 +103,7 @@
             <!-- Animated tally fill bar -->
             <div
               class="absolute inset-y-0 left-0 bg-indigo-50 group-hover:bg-indigo-100 transition-all duration-700 ease-out"
-              [style.width.%]="calculatePercentage(option.vote_count || 0)"
+              [style.width.%]="calculatePercentage(option.voteCount || 0)"
             ></div>
 
             <div class="relative flex items-center justify-between px-5 py-4 gap-4">
@@ -139,10 +139,10 @@
                   </div>
                 }
                 <p class="font-extrabold text-xl text-indigo-700 mb-0 tabular-nums">
-                  {{ calculatePercentage(option.vote_count || 0) | number : '1.0-0' }}%
+                  {{ calculatePercentage(option.voteCount || 0) | number : '1.0-0' }}%
                 </p>
                 <p class="text-xs text-gray-400 mb-0 tabular-nums">
-                  {{ option.vote_count || 0 }} votes
+                  {{ option.voteCount || 0 }} votes
                 </p>
               </div>
             </div>

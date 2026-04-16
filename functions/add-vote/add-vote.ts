@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { NotFoundError, Router } from '@aws-lambda-powertools/event-handler/http';
 import { z } from 'zod';
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
-import { Vote } from "../common/models/poll.types";
+import { OptionRecord } from "../common/models/poll.types";
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -38,9 +38,12 @@ app.post(
 
         const voteId = randomUUID();
 
-        const selectOptionResult = await db.query<Vote>(
+        const selectOptionResult = await db.query<OptionRecord>(
             `
-                SELECT *
+                SELECT option_id   as optionId,
+                       poll_id     as pollId,
+                       title       as title,
+                       description as description
                 FROM option
                 WHERE poll_id = :pollId::uuid
                   and option_id = :optionId::uuid
@@ -107,14 +110,17 @@ async function publishUpdatedTally(pollId: string, optionId: string, votedBy: an
         }
     };
 
-    try {
-        const endpoint = process.env.APPSYNC_ENDPOINT;
-        const apiKey = process.env.APPSYNC_API_KEY;
+    const endpoint = process.env.APPSYNC_ENDPOINT;
+    const apiKey = process.env.APPSYNC_API_KEY;
+    if (!endpoint || !apiKey) {
+        throw new Error("APPSYNC_ENDPOINT and APPSYNC_API_KEY must be present in env");
+    }
 
-        const response = await fetch(`https://${endpoint!}/event`, {
+    try {
+        const response = await fetch(`https://${endpoint}/event`, {
             method: 'POST',
             headers: {
-                'x-api-key': apiKey!,
+                'x-api-key': apiKey,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({

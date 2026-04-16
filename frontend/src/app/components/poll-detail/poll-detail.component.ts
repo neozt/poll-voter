@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular
 import { events, EventsChannel } from 'aws-amplify/api';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PollService, Poll } from '../../services/poll.service';
+import { PollService, Poll, PollOption } from '../../services/poll.service';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
@@ -39,7 +39,7 @@ export class PollDetailComponent implements OnInit, OnDestroy {
   votingOptionId = signal<string | null>(null);
 
   totalVotes = computed(
-    () => this.poll()?.options.reduce((sum, o) => sum + (o.vote_count || 0), 0) ?? 0
+    () => this.poll()?.options.reduce((sum, o) => sum + (o.voteCount || 0), 0) ?? 0
   );
 
   private channel?: EventsChannel;
@@ -91,7 +91,7 @@ export class PollDetailComponent implements OnInit, OnDestroy {
     // Update the local poll object with new tallies
     const newOptions = currentPoll.options.map((opt) => {
       const tally = payload.voteTally.find((t: [string, number]) => t[0] === opt.id);
-      return tally ? { ...opt, vote_count: tally[1] } : opt;
+      return tally ? { ...opt, voteCount: tally[1] } as PollOption : opt;
     });
 
     this.poll.set({ ...currentPoll, options: newOptions });
