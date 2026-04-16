@@ -44,7 +44,7 @@ export class PollDetailComponent implements OnInit, OnDestroy {
 
   private channel?: EventsChannel;
   userId = signal('');
-  someoneElseVoting = signal<string | null>(null); // Option ID of someone else's vote
+  recentVotes = signal<Record<string, number>>({}); // Maps optionId to count of active indicators
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -98,12 +98,25 @@ export class PollDetailComponent implements OnInit, OnDestroy {
 
     // Indicator if someone else voted
     if (payload.latestVote?.votedBy !== this.userId()) {
-      this.someoneElseVoting.set(payload.latestVote.optionId);
+      const optionId = payload.latestVote.optionId;
+
+      // Increment count for this option
+      this.recentVotes.update((prev) => ({
+        ...prev,
+        [optionId]: (prev[optionId] || 0) + 1,
+      }));
+
+      // Decrement after 2 seconds
       setTimeout(() => {
-        if (this.someoneElseVoting() === payload.latestVote.optionId) {
-          this.someoneElseVoting.set(null);
-        }
-      }, 2000);
+        this.recentVotes.update((prev) => {
+          const newCount = (prev[optionId] || 0) - 1;
+          if (newCount <= 0) {
+            const { [optionId]: _, ...rest } = prev;
+            return rest;
+          }
+          return { ...prev, [optionId]: newCount };
+        });
+      }, 1000);
     }
   }
 

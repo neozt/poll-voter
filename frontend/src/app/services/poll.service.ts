@@ -4,14 +4,14 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface PollOption {
-  id?: string;
+  id: string;
   title: string;
   description?: string;
   vote_count?: number;
 }
 
 export interface Poll {
-  id?: string;
+  id: string;
   title: string;
   description?: string;
   created_by?: string;
