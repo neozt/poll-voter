@@ -45,9 +45,9 @@ Write-Host "Generating environment.production.ts..."
 $env_content | Out-File -FilePath "frontend/src/environments/environment.production.ts" -Encoding utf8
 
 # Run npm install and build
-Write-Host "Running npm ci in frontend..."
+Write-Host "Running npm install in frontend..."
 Set-Location frontend
-npm ci
+npm install
 if ($LASTEXITCODE -ne 0) {
     Write-Error "npm install failed."
     Set-Location ..
