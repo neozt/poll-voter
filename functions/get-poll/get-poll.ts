@@ -2,8 +2,9 @@ import { type Context } from 'aws-lambda';
 import dataApiClient from 'data-api-client';
 import { NotFoundError, Router } from '@aws-lambda-powertools/event-handler/http';
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
-import { PollDetails } from '../common/models/types';
+import { PollOverviewSqlResult } from '../common/models/poll.types';
 import { z } from 'zod';
+import { convertToPollDetailsDto } from "../common/mappers/poll.mappers";
 
 
 const db = dataApiClient({
@@ -30,7 +31,7 @@ app.get(
     async (reqCtx) => {
         const pollId = reqCtx.valid.req.path.pollId;
 
-        const result = await db.query<PollDetails>(
+        const result = await db.query<PollOverviewSqlResult>(
             `SELECT * FROM poll_overview WHERE poll_id = :pollId::uuid`,
             {pollId}
         );
@@ -39,7 +40,12 @@ app.get(
             throw new NotFoundError(`Poll not found.`, undefined, {pollId});
         }
 
-        return JSON.stringify(result.records[0]);
+        const pollDetails = convertToPollDetailsDto(result.records);
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify(pollDetails)
+        };
     },
     {
         validation: {req: {path: pathSchema}}
