@@ -22,7 +22,7 @@ foreach ($out in $outputs) {
 }
 
 # Load .env template
-$env_path = "frontend/.env"
+$env_path = "frontend/src/environments/environment.ts"
 if (-not (Test-Path $env_path)) {
     Write-Error ".env file not found at $env_path"
     exit 1
@@ -30,7 +30,7 @@ if (-not (Test-Path $env_path)) {
 $env_content = Get-Content -Path $env_path -Raw
 
 # Replace placeholders %%xxx%% with stack outputs
-Write-Host "Replacing placeholders in .env..."
+Write-Host "Replacing placeholders in environment.ts..."
 foreach ($key in $outputMap.Keys) {
     $placeholder = "%%$key%%"
     $value = $outputMap[$key]
@@ -41,11 +41,11 @@ foreach ($key in $outputMap.Keys) {
 }
 
 # Write .env.production
-Write-Host "Generating .env.production..."
-$env_content | Out-File -FilePath "frontend/.env.production" -Encoding utf8
+Write-Host "Generating environment.production.ts..."
+$env_content | Out-File -FilePath "frontend/src/environments/environment.production.ts" -Encoding utf8
 
 # Run npm install and build
-Write-Host "Running npm install in frontend..."
+Write-Host "Running npm ci in frontend..."
 Set-Location frontend
 npm ci
 if ($LASTEXITCODE -ne 0) {
@@ -76,7 +76,7 @@ if (-not $s3_bucket_name -or -not $cloudfront_distribution_id) {
 
 # Sync distribution with S3
 Write-Host "Syncing with S3 bucket: $s3_bucket_name..."
-aws s3 sync "dist/" "s3://$s3_bucket_name/" --delete
+aws s3 sync "frontend/dist/poll-voter-frontend/browser/" "s3://$s3_bucket_name/" --delete
 
 # Create cloudfront invalidation
 Write-Host "Creating CloudFront invalidation for distribution: $cloudfront_distribution_id..."
@@ -90,4 +90,4 @@ aws cloudfront wait invalidation-completed --distribution-id $cloudfront_distrib
 $cloudfront_domain_name = aws cloudfront list-distributions --query "DistributionList.Items[?Id=='$cloudfront_distribution_id'].DomainName" --output text
 
 Write-Host "`nDeployment Complete!"
-Write-Host "Please visit your CloudFront URL to test: https://$cloudfront_domain_name"
+Write-Host "Please visit your CloudFront URL to test: https://$cloudfront_domain_name"

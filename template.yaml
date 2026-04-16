@@ -286,16 +286,14 @@ Resources:
         function handler(event) {
             var request = event.request;
             var uri = request.uri;
-            
-            // If the URI ends with '/', append 'index.html'
-            if (uri.endsWith('/')) {
-                request.uri += 'index.html';
-            } 
-            // If the URI doesn't have a '.' (no extension), append '/index.html'
-            else if (!uri.includes('.')) {
-                request.uri += '/index.html';
+
+            // Serve static assets (files with extensions) as-is
+            if (uri.includes('.')) {
+                return request;
             }
 
+            // For all Angular SPA routes (no file extension), serve index.html
+            request.uri = '/index.html';
             return request;
         }
 

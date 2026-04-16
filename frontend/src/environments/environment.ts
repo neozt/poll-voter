@@ -2,5 +2,5 @@
 // These placeholders will be replaced by CloudFormation output at build time
 export const environment = {
   production: false,
-  apiUrl: '%%ApiUrl%%',
+  apiUrl: '%%PollApiUrl%%',
 };
