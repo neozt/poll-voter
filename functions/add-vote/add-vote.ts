@@ -11,8 +11,12 @@ const db = dataApiClient({
     database: process.env.DB_NAME!,
 });
 
-const addVoteSchema = z.object({
+const bodySchema = z.object({
     optionId: z.string(),
+});
+
+const pathSchema = z.object({
+    pollId: z.uuid(),
 });
 
 const app = new Router();
@@ -28,9 +32,7 @@ app.post(
     '/polls/:pollId/votes',
     async (reqCtx) => {
         const pollId = reqCtx.params.pollId;
-        console.log("pollId", pollId);
         const optionId = reqCtx.valid.req.body.optionId;
-        console.log("optionId", optionId);
 
         const voteId = randomUUID();
 
@@ -66,7 +68,7 @@ app.post(
         };
     },
     {
-        validation: {req: {body: addVoteSchema}}
+        validation: {req: {body: bodySchema, path: pathSchema}}
     }
 );
 
