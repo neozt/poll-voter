@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { events, EventsChannel } from 'aws-amplify/api';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PollService, Poll } from '../../services/poll.service';
@@ -41,19 +42,68 @@ export class PollDetailComponent implements OnInit, OnDestroy {
     () => this.poll()?.options.reduce((sum, o) => sum + (o.vote_count || 0), 0) ?? 0
   );
 
-  private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private channel?: EventsChannel;
+  userId = signal('');
+  someoneElseVoting = signal<string | null>(null); // Option ID of someone else's vote
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     this.pollId.set(id);
+    this.initUserId();
     this.loadPoll();
-    // Poll every 5 seconds
-    this.pollInterval = setInterval(() => this.loadPoll(true), 5000);
+    this.subscribeToPollUpdates();
   }
 
   ngOnDestroy(): void {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
+    if (this.channel) {
+      this.channel.close();
+    }
+  }
+
+  initUserId(): void {
+    const id = crypto.randomUUID();
+    this.userId.set(id);
+  }
+
+  async subscribeToPollUpdates() {
+    try {
+      const channel = `/polls/${this.pollId()}`;
+      this.channel = await events.connect(channel);
+      this.channel.subscribe({
+        next: (event: any) => {
+          this.handleRealTimeUpdate(event.event);
+        },
+        error: (e) => {
+          console.error(`Error subscribing to channel /polls/${this.pollId}`, e)
+        }
+      });
+    } catch (err) {
+      console.error('Failed to subscribe to poll updates', err);
+    }
+  }
+
+  handleRealTimeUpdate(payload: any) {
+    const currentPoll = this.poll();
+    if (!currentPoll) {
+      return;
+    }
+
+    // Update the local poll object with new tallies
+    const newOptions = currentPoll.options.map((opt) => {
+      const tally = payload.voteTally.find((t: [string, number]) => t[0] === opt.id);
+      return tally ? { ...opt, vote_count: tally[1] } : opt;
+    });
+
+    this.poll.set({ ...currentPoll, options: newOptions });
+
+    // Indicator if someone else voted
+    if (payload.latestVote?.votedBy !== this.userId()) {
+      this.someoneElseVoting.set(payload.latestVote.optionId);
+      setTimeout(() => {
+        if (this.someoneElseVoting() === payload.latestVote.optionId) {
+          this.someoneElseVoting.set(null);
+        }
+      }, 2000);
     }
   }
 
@@ -70,9 +120,6 @@ export class PollDetailComponent implements OnInit, OnDestroy {
         this.loading.set(false);
         if (err.status === 404) {
           this.notFound.set(true);
-          if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-          }
         } else if (!silent) {
           this.message.error('Failed to load poll.');
           console.error(err);
@@ -85,11 +132,11 @@ export class PollDetailComponent implements OnInit, OnDestroy {
     if (this.votingOptionId()) {
       return;
     } // debounce concurrent votes
+
     this.votingOptionId.set(optionId);
-    this.pollService.addVote(this.pollId(), optionId).subscribe({
+    this.pollService.addVote(this.pollId(), optionId, this.userId()).subscribe({
       next: () => {
         this.votingOptionId.set(null);
-        this.loadPoll(true); // immediately refresh tallies
       },
       error: (err) => {
         this.message.error('Failed to cast vote. Please try again.');

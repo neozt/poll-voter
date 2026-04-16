@@ -1,4 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { Amplify } from 'aws-amplify';
+import { environment } from '../environments/environment';
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -9,19 +11,31 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import {
-  PlusCircleOutline,
-  LoginOutline,
-  SearchOutline,
-  CheckCircleOutline,
-  EyeOutline,
-  CopyOutline,
-  QuestionCircleOutline,
-  CloseOutline,
-  PlusOutline,
   ArrowLeftOutline,
-  LoadingOutline,
+  CheckCircleOutline,
+  CloseOutline,
+  CopyOutline,
+  EyeOutline,
   InfoCircleOutline,
+  LoadingOutline,
+  LoginOutline,
+  PlusCircleOutline,
+  PlusOutline,
+  QuestionCircleOutline,
+  SearchOutline,
+  UserOutline,
 } from '@ant-design/icons-angular/icons';
+
+Amplify.configure({
+  API: {
+    Events: {
+      endpoint: `https://${environment.appSyncEndpoint}/event`,
+      region: environment.appSyncRegion,
+      defaultAuthMode: 'apiKey',
+      apiKey: environment.appSyncApiKey,
+    },
+  },
+});
 
 registerLocaleData(en);
 
@@ -45,6 +59,7 @@ export const appConfig: ApplicationConfig = {
       ArrowLeftOutline,
       LoadingOutline,
       InfoCircleOutline,
+      UserOutline,
     ]),
   ],
 };

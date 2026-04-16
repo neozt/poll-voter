@@ -3,4 +3,7 @@
 export const environment = {
   production: false,
   apiUrl: '%%PollApiUrl%%',
+  appSyncEndpoint: '%%AppSyncEndpoint%%',
+  appSyncApiKey: '%%AppSyncApiKey%%',
+  appSyncRegion: 'ap-southeast-1',
 };

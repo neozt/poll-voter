@@ -48,10 +48,10 @@ export class PollService {
     return this.http.post<{ message: string; poll_id: string }>(`${this.apiUrl}/polls`, poll);
   }
 
-  addVote(pollId: string, optionId: string): Observable<{ message: string; voteId: string }> {
+  addVote(pollId: string, optionId: string, votedBy: string): Observable<{ message: string; voteId: string }> {
     return this.http.post<{ message: string; voteId: string }>(
       `${this.apiUrl}/polls/${pollId}/votes`,
-      { optionId }
+      { optionId, votedBy }
     );
   }
 }
