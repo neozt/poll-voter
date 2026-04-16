@@ -1,0 +1,241 @@
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { PollService, Poll } from '../../services/poll.service';
+
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzTypographyModule } from 'ng-zorro-antd/typography';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzResultModule } from 'ng-zorro-antd/result';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+
+@Component({
+  selector: 'app-poll-detail',
+  standalone: true,
+  imports: [
+    CommonModule,
+    NzButtonModule,
+    NzTypographyModule,
+    NzSpinModule,
+    NzResultModule,
+    NzTagModule,
+    NzIconModule,
+  ],
+  providers: [NzMessageService],
+  template: `
+    <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-4 md:p-8">
+      <div class="max-w-2xl mx-auto">
+
+        <!-- Loading skeleton -->
+        @if (loading() && !poll()) {
+          <div class="flex flex-col items-center justify-center h-64 gap-4">
+            <nz-spin nzSimple nzSize="large" [nzSpinning]="true"></nz-spin>
+            <p class="text-gray-400 text-sm">Loading poll...</p>
+          </div>
+        }
+
+        <!-- Not Found -->
+        @if (!loading() && notFound()) {
+          <nz-result
+            nzStatus="404"
+            nzTitle="Poll Not Found"
+            nzSubTitle="The poll ID you entered doesn't exist or may have been removed."
+          >
+            <div nz-result-extra>
+              <button nz-button nzType="primary" class="rounded-xl bg-indigo-600 border-none" (click)="goHome()">
+                Back to Home
+              </button>
+            </div>
+          </nz-result>
+        }
+
+        <!-- Poll content -->
+        @if (poll()) {
+          <!-- Back + header -->
+          <div class="mb-6">
+            <button nz-button nzType="text" class="text-gray-400 hover:text-gray-700 mb-3 -ml-2 flex items-center gap-1" (click)="goHome()">
+              <span nz-icon nzType="arrow-left"></span>
+              <span class="text-sm">Home</span>
+            </button>
+
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight mb-1">
+                  {{ poll()!.title }}
+                </h1>
+                @if (poll()!.description) {
+                  <p class="text-gray-500 text-sm">{{ poll()!.description }}</p>
+                }
+              </div>
+              <nz-tag nzColor="geekblue" class="flex-shrink-0 mt-1 rounded-lg text-sm font-semibold px-3 py-1">
+                {{ totalVotes() }} {{ totalVotes() === 1 ? 'vote' : 'votes' }}
+              </nz-tag>
+            </div>
+
+            <!-- Poll ID chip -->
+            <div class="mt-3 inline-flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm">
+              <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Poll ID</span>
+              <span class="font-mono text-xs text-gray-700 font-bold">{{ pollId() }}</span>
+              <button class="text-gray-400 hover:text-indigo-500 border-none bg-transparent cursor-pointer p-0 transition-colors" (click)="copyId()">
+                <span nz-icon nzType="copy" class="text-xs"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live refresh indicator -->
+          <div class="flex items-center gap-2 mb-5">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-xs text-gray-400">Live — refreshes every 5 seconds</span>
+          </div>
+
+          <!-- Options / voting + live tally -->
+          <div class="space-y-3">
+            @for (option of poll()!.options; track option.id) {
+              <div
+                class="relative bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 cursor-pointer group"
+                [class.border-indigo-300]="votingOptionId() !== option.id"
+                [class.border-indigo-500]="votingOptionId() === option.id"
+                [class.hover:border-indigo-500]="votingOptionId() === null"
+                [class.hover:shadow-lg]="votingOptionId() === null"
+                [class.opacity-70]="votingOptionId() !== null && votingOptionId() !== option.id"
+                (click)="vote(option.id!)"
+              >
+                <!-- Animated tally fill bar -->
+                <div
+                  class="absolute inset-y-0 left-0 bg-indigo-50 group-hover:bg-indigo-100 transition-all duration-700 ease-out"
+                  [style.width.%]="calculatePercentage(option.vote_count || 0)"
+                ></div>
+
+                <div class="relative flex items-center justify-between px-5 py-4 gap-4">
+                  <!-- Option label -->
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex-shrink-0 w-9 h-9 rounded-xl bg-indigo-100 group-hover:bg-indigo-200 text-indigo-700 font-extrabold flex items-center justify-center text-base transition-colors">
+                      @if (votingOptionId() === option.id) {
+                        <span nz-icon nzType="loading"></span>
+                      } @else {
+                        {{ optionLetter($index) }}
+                      }
+                    </div>
+                    <div class="min-w-0">
+                      <p class="font-semibold text-gray-800 text-base mb-0 truncate">{{ option.title }}</p>
+                      @if (option.description) {
+                        <p class="text-xs text-gray-400 mb-0 truncate">{{ option.description }}</p>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Tally -->
+                  <div class="flex-shrink-0 text-right">
+                    <p class="font-extrabold text-xl text-indigo-700 mb-0 tabular-nums">
+                      {{ calculatePercentage(option.vote_count || 0) | number:'1.0-0' }}%
+                    </p>
+                    <p class="text-xs text-gray-400 mb-0 tabular-nums">{{ option.vote_count || 0 }} votes</p>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Vote hint -->
+          <div class="mt-6 text-center">
+            <p class="text-sm text-gray-400">
+              <span nz-icon nzType="info-circle" class="mr-1"></span>
+              Tap any option to vote. You can vote as many times as you like!
+            </p>
+          </div>
+        }
+
+      </div>
+    </div>
+  `
+})
+export class PollDetailComponent implements OnInit, OnDestroy {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private pollService = inject(PollService);
+  private message = inject(NzMessageService);
+
+  poll = signal<Poll | null>(null);
+  loading = signal(true);
+  notFound = signal(false);
+  pollId = signal('');
+  votingOptionId = signal<string | null>(null);
+
+  totalVotes = computed(() =>
+    this.poll()?.options.reduce((sum, o) => sum + (o.vote_count || 0), 0) ?? 0
+  );
+
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id') ?? '';
+    this.pollId.set(id);
+    this.loadPoll();
+    // Poll every 5 seconds
+    this.pollInterval = setInterval(() => this.loadPoll(true), 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollInterval) clearInterval(this.pollInterval);
+  }
+
+  loadPoll(silent = false): void {
+    if (!silent) this.loading.set(true);
+    this.pollService.getPoll(this.pollId()).subscribe({
+      next: (data) => {
+        this.poll.set(data);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        if (err.status === 404) {
+          this.notFound.set(true);
+          if (this.pollInterval) clearInterval(this.pollInterval);
+        } else if (!silent) {
+          this.message.error('Failed to load poll.');
+          console.error(err);
+        }
+      }
+    });
+  }
+
+  vote(optionId: string): void {
+    if (this.votingOptionId()) return; // debounce concurrent votes
+    this.votingOptionId.set(optionId);
+    this.pollService.addVote(this.pollId(), optionId).subscribe({
+      next: () => {
+        this.votingOptionId.set(null);
+        this.loadPoll(true); // immediately refresh tallies
+      },
+      error: (err) => {
+        this.message.error('Failed to cast vote. Please try again.');
+        this.votingOptionId.set(null);
+        console.error(err);
+      }
+    });
+  }
+
+  calculatePercentage(voteCount: number): number {
+    const total = this.totalVotes();
+    if (total === 0) return 0;
+    return (voteCount / total) * 100;
+  }
+
+  optionLetter(index: number): string {
+    return String.fromCharCode(65 + index); // A, B, C, ...
+  }
+
+  copyId(): void {
+    navigator.clipboard.writeText(this.pollId());
+    this.message.success('Poll ID copied!');
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
+  }
+}

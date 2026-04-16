@@ -1,9 +1,12 @@
 import { Routes } from '@angular/router';
-import { PollListComponent } from './components/poll-list/poll-list.component';
+import { HomeComponent } from './components/home/home.component';
 import { CreatePollComponent } from './components/create-poll/create-poll.component';
+import { PollDetailComponent } from './components/poll-detail/poll-detail.component';
 
 export const routes: Routes = [
-  { path: '', component: PollListComponent },
+  { path: '', component: HomeComponent },
   { path: 'create', component: CreatePollComponent },
+  { path: 'poll/:id', component: PollDetailComponent },
   { path: '**', redirectTo: '' }
 ];
+
