@@ -216,12 +216,10 @@ Resources:
       EventConfig:
         AuthProviders:
           - AuthType: API_KEY
-          - AuthType: AWS_IAM
         ConnectionAuthModes:
           - AuthType: API_KEY
         DefaultPublishAuthModes:
           - AuthType: API_KEY
-          - AuthType: AWS_IAM
         DefaultSubscribeAuthModes:
           - AuthType: API_KEY
 
@@ -232,7 +230,6 @@ Resources:
       Name: "polls"
       PublishAuthModes:
         - AuthType: API_KEY
-        - AuthType: AWS_IAM
       SubscribeAuthModes:
         - AuthType: API_KEY
 
