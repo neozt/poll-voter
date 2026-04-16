@@ -19,7 +19,7 @@ const createPollSchema = z.object({
             title: z.string(),
             description: z.string().optional(),
         })
-    ),
+    ).min(1),
 });
 
 const app = new Router();
