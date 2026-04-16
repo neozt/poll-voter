@@ -136,6 +136,8 @@ Resources:
           DB_SECRET_ARN: !Ref PollDBSecret
           DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
           DB_NAME: "pollvoterdb"
+          APPSYNC_ENDPOINT: !Sub "${PollEventsApi.Dns.Http}"
+          APPSYNC_API_KEY: !GetAtt StockApiKey.ApiKey
       Policies:
         - Statement:
             - Effect: Allow
@@ -150,6 +152,10 @@ Resources:
                 - rds-data:CommitTransaction
                 - rds-data:RollbackTransaction
               Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
+            - Effect: Allow
+              Action:
+                - appsync:EventPublish
+              Resource: !Sub "arn:aws:appsync:${AWS::Region}:${AWS::AccountId}:apis/${PollEventsApi.ApiId}/channels/polls/*"
       Events:
         SubmitApi:
           Type: Api
@@ -210,10 +216,12 @@ Resources:
       EventConfig:
         AuthProviders:
           - AuthType: API_KEY
+          - AuthType: AWS_IAM
         ConnectionAuthModes:
           - AuthType: API_KEY
         DefaultPublishAuthModes:
           - AuthType: API_KEY
+          - AuthType: AWS_IAM
         DefaultSubscribeAuthModes:
           - AuthType: API_KEY
 
@@ -224,6 +232,7 @@ Resources:
       Name: "polls"
       PublishAuthModes:
         - AuthType: API_KEY
+        - AuthType: AWS_IAM
       SubscribeAuthModes:
         - AuthType: API_KEY
 

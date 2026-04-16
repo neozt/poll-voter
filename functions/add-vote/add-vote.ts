@@ -65,6 +65,49 @@ app.post(
 
         await transaction.commit();
 
+        const currentTallyQueryResult = await db.query<{
+            option_id: string;
+            vote_count: number;
+            current_timestamp: Date;
+        }>(
+            `select option_id, vote_count, current_timestamp from poll_overview where poll_id = :pollId::uuid`,
+            { pollId }
+        );
+
+        const voteTally = currentTallyQueryResult.records
+            ?.map((row) => ([row.option_id, row.vote_count] as [string, number]))
+            ?? [];
+
+        const appSyncMessage = {
+            pollId,
+            voteTally,
+            timestamp: currentTallyQueryResult?.records?.[0]?.current_timestamp,
+        };
+
+        try {
+            const endpoint = process.env.APPSYNC_ENDPOINT;
+            const apiKey = process.env.APPSYNC_API_KEY;
+
+            const response = await fetch(`https://${endpoint!}/event`, {
+                method: 'POST',
+                headers: {
+                    'x-api-key': apiKey!,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channel: `polls/${pollId}`,
+                    events: [JSON.stringify(appSyncMessage)],
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`AppSync Publish Error (${response.status}):`, errorText);
+            }
+        } catch (error) {
+            console.error('Failed to publish to AppSync', error);
+        }
+
         return {
             statusCode: 201,
             body: { message: 'Vote casted', voteId },
