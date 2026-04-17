@@ -1,10 +1,11 @@
 import { type Context } from 'aws-lambda';
 import dataApiClient from 'data-api-client';
-import { NotFoundError, Router } from '@aws-lambda-powertools/event-handler/http';
+import { Router } from '@aws-lambda-powertools/event-handler/http';
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
 import { PollOverviewResult } from '../common/models/poll.types';
 import { z } from 'zod';
 import { convertToPollDetailsDto } from '../common/mappers/poll.mappers';
+import { notFound } from "../common/utils/response.util";
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -47,7 +48,7 @@ app.get(
         );
 
         if (!result.records || result.records.length == 0) {
-            throw new NotFoundError(`Poll not found.`, undefined, { pollId });
+            return notFound(`Poll not found.`, { pollId });
         }
 
         const pollDetails = convertToPollDetailsDto(result.records);

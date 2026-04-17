@@ -1,10 +1,11 @@
 import type { Context } from 'aws-lambda';
 import dataApiClient from 'data-api-client';
 import { randomUUID } from 'crypto';
-import { NotFoundError, Router } from '@aws-lambda-powertools/event-handler/http';
+import { Router } from '@aws-lambda-powertools/event-handler/http';
 import { z } from 'zod';
 import { cors } from '@aws-lambda-powertools/event-handler/http/middleware';
 import { OptionRecord } from "../common/models/poll.types";
+import { notFound } from "../common/utils/response.util";
 
 const db = dataApiClient({
     secretArn: process.env.DB_SECRET_ARN!,
@@ -52,7 +53,7 @@ app.post(
         );
 
         if (selectOptionResult.records!.length === 0) {
-            throw new NotFoundError('pollId or optionId not found.');
+            return notFound('pollId or optionId not found.');
         }
 
         await db.query(
