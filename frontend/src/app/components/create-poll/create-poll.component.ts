@@ -1,8 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { CreatePollRequest, PollService } from '../../services/poll.service';
+import { PollService } from '../../services/poll.service';
 
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -34,7 +34,7 @@ import { finalize } from 'rxjs';
   templateUrl: 'create-poll.component.html',
 })
 export class CreatePollComponent {
-  private fb = inject(FormBuilder);
+  private fb = inject(NonNullableFormBuilder);
   private pollService = inject(PollService);
   private message = inject(NzMessageService);
   private router = inject(Router);
@@ -42,14 +42,14 @@ export class CreatePollComponent {
   isSubmitting = signal(false);
   createdPollId = signal<string | null>(null);
 
-  pollForm: FormGroup = this.fb.group({
-    title: [null, [Validators.required, Validators.maxLength(200)]],
-    description: [null, [Validators.maxLength(1000)]],
-    options: this.fb.array([], [Validators.minLength(2)]),
+  pollForm = this.fb.group({
+    title: ['', [Validators.required, Validators.maxLength(200)]],
+    description: ['', [Validators.maxLength(1000)]],
+    options: this.fb.array<FormGroup<{ title: FormControl<string> }>>([]),
   });
 
-  get options(): FormArray {
-    return this.pollForm.get('options') as FormArray;
+  get options() {
+    return this.pollForm.controls.options;
   }
 
   constructor() {
@@ -57,9 +57,9 @@ export class CreatePollComponent {
     this.addOption();
   }
 
-  createOptionFormGroup(): FormGroup {
+  createOptionFormGroup() {
     return this.fb.group({
-      title: [null, [Validators.required, Validators.maxLength(100)]],
+      title: ['', [Validators.required, Validators.maxLength(100)]],
     });
   }
 
@@ -99,10 +99,7 @@ export class CreatePollComponent {
       return;
     }
 
-    const request: CreatePollRequest = {
-      ...this.pollForm.value,
-      description: this.pollForm.value.description ?? ''
-    };
+    const request = this.pollForm.getRawValue();
     this.isSubmitting.set(true);
     this.pollService.createPoll(request)
       .pipe(finalize(() => this.isSubmitting.set(false)))

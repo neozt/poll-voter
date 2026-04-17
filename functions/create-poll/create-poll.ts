@@ -13,12 +13,12 @@ const db = dataApiClient({
 
 const createPollSchema = z.object({
     title: z.string(),
-    description: z.string().optional(),
+    description: z.string().nullish(),
     options: z
         .array(
             z.object({
                 title: z.string(),
-                description: z.string().optional(),
+                description: z.string().nullish(),
             }),
         )
         .min(1),
@@ -47,7 +47,7 @@ app.post(
             {
                 title,
                 id: pollId,
-                desc: description || null,
+                desc: description ?? '',
             }
         );
 
