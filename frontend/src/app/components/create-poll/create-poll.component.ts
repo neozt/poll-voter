@@ -1,8 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { PollService, CreatePollRequest } from '../../services/poll.service';
+import { CreatePollRequest, PollService } from '../../services/poll.service';
 
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -13,6 +13,7 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-create-poll',
@@ -79,36 +80,41 @@ export class CreatePollComponent {
   }
 
   submitForm(): void {
-    if (this.pollForm.valid) {
-      this.isSubmitting.set(true);
-      const request: CreatePollRequest = this.pollForm.value;
-      this.pollService.createPoll(request).subscribe({
-        next: (res) => {
-          this.isSubmitting.set(false);
-          this.createdPollId.set(res.pollId);
-        },
-        error: (err) => {
-          this.message.error('Failed to create poll. Please try again.');
-          console.error(err);
-          this.isSubmitting.set(false);
-        },
-      });
-    } else {
+    if (!this.pollForm.valid) {
       Object.values(this.pollForm.controls).forEach((control) => {
         if (control.invalid) {
           control.markAsDirty();
-          control.updateValueAndValidity({ onlySelf: true });
+          control.updateValueAndValidity({onlySelf: true});
         }
       });
       this.options.controls.forEach((group) => {
         Object.values((group as FormGroup).controls).forEach((control) => {
           if (control.invalid) {
             control.markAsDirty();
-            control.updateValueAndValidity({ onlySelf: true });
+            control.updateValueAndValidity({onlySelf: true});
           }
         });
       });
+
+      return;
     }
+
+    const request: CreatePollRequest = {
+      ...this.pollForm.value,
+      description: this.pollForm.value.description ?? ''
+    };
+    this.isSubmitting.set(true);
+    this.pollService.createPoll(request)
+      .pipe(finalize(() => this.isSubmitting.set(false)))
+      .subscribe({
+        next: (res) => {
+          this.createdPollId.set(res.pollId);
+        },
+        error: (err) => {
+          this.message.error('Failed to create poll. Please try again.');
+          console.error(err);
+        },
+      });
   }
 
   copyId(): void {
