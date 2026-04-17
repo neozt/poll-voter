@@ -137,7 +137,7 @@ Resources:
           DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
           DB_NAME: "pollvoterdb"
           APPSYNC_ENDPOINT: !Sub "${PollEventsApi.Dns.Http}"
-          APPSYNC_API_KEY: !GetAtt StockApiKey.ApiKey
+          APPSYNC_API_KEY: !GetAtt PollApiKey.ApiKey
       Policies:
         - Statement:
             - Effect: Allow
@@ -233,7 +233,7 @@ Resources:
       SubscribeAuthModes:
         - AuthType: API_KEY
 
-  StockApiKey:
+  PollApiKey:
     Type: AWS::AppSync::ApiKey
     Properties:
       ApiId: !GetAtt PollEventsApi.ApiId
@@ -404,3 +404,15 @@ Outputs:
   RDSEndpoint:
     Description: "The connection endpoint for the Aurora Cluster"
     Value: !GetAtt PollDatabaseCluster.Endpoint.Address
+  AppSyncApiKey:
+    Description: "API Key for subscribing to stock updates"
+    Value: !GetAtt PollApiKey.ApiKey
+  AppSyncHttpEndpoint:
+    Description: "API Key for subscribing to stock updates"
+    Value: !GetAtt PollEventsApi.Dns.Http
+  AppSyncRealtimeEndpoint:
+    Description: "API Key for subscribing to stock updates"
+    Value: !GetAtt PollEventsApi.Dns.Realtime
+  AwsRegion:
+    Description: "AWS Region"
+    Value: !Ref AWS::Region
