@@ -224,6 +224,9 @@ Resources:
           DB_SECRET_ARN: !Ref PollDBSecret
           DB_CLUSTER_ARN: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
           DB_NAME: "pollvoterdb"
+          APPSYNC_ENDPOINT: !Sub "${PollEventsApi.Dns.Http}"
+          APPSYNC_API_KEY: !GetAtt PollApiKey.ApiKey
+
       Policies:
         - Statement:
             - Effect: Allow
@@ -234,6 +237,10 @@ Resources:
               Action:
                 - rds-data:ExecuteStatement
               Resource: !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${PollDatabaseCluster}'
+            - Effect: Allow
+              Action:
+                - appsync:EventPublish
+              Resource: !Sub "arn:aws:appsync:${AWS::Region}:${AWS::AccountId}:apis/${PollEventsApi.ApiId}/channels/participants/*"
       Events:
         SubmitApi:
           Type: Api
@@ -279,6 +286,16 @@ Resources:
       ApiId: !GetAtt PollEventsApi.ApiId
       Description: "Key for frontend polls subscription"
       Expires: !Ref ApiKeyExpiration
+
+  ParticipantsNamespace:
+    Type: AWS::AppSync::ChannelNamespace
+    Properties:
+      ApiId: !GetAtt PollEventsApi.ApiId
+      Name: "participants"
+      PublishAuthModes:
+        - AuthType: API_KEY
+      SubscribeAuthModes:
+        - AuthType: API_KEY
 
   # Security Group for Database Access
   PollDatabaseSecurityGroup:

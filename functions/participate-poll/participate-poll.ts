@@ -69,6 +69,8 @@ app.post(
                 }
             }
 
+            await publishParticipantsCount(pollId);
+
             return {
                 statusCode: 201,
             };
@@ -83,3 +85,52 @@ app.post(
 );
 
 export const handler = async (event: unknown, context: Context) => app.resolve(event, context);
+
+async function publishParticipantsCount(pollId: string) {
+    const countParticipantsQueryResult = await db.query<{count: number}>(
+        `
+                    WITH cleanup AS (
+                        DELETE FROM participant
+                            WHERE latest_heartbeat < current_timestamp - interval '20 seconds'
+                    )
+                    SELECT count(1)
+                    FROM participant
+                    WHERE poll_id = :pollId::uuid;
+                `,
+        {pollId}
+    );
+    const participantsCount = countParticipantsQueryResult.records![0].count;
+    const endpoint = process.env.APPSYNC_ENDPOINT;
+    const apiKey = process.env.APPSYNC_API_KEY;
+    if (!endpoint || !apiKey) {
+        throw new Error("APPSYNC_ENDPOINT and APPSYNC_API_KEY must be present in env");
+    }
+
+    try {
+        const channel = `participants/${pollId}`;
+        const message = JSON.stringify({
+            pollId,
+            participantsCount,
+        });
+        const response = await fetch(`https://${endpoint}/event`, {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                channel: channel,
+                events: [message],
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`AppSync Publish Error (${response.status}):`, errorText);
+        }
+
+        console.log(`Published to ${channel}: ${message}`);
+    } catch (error) {
+        console.error('Failed to publish to AppSync', error);
+    }
+}
