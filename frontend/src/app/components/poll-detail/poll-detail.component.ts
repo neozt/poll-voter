@@ -25,6 +25,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
   ],
   providers: [NzMessageService],
   templateUrl: 'poll-detail.component.html',
+  styleUrl: 'poll-detail.component.css'
 })
 export class PollDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -43,6 +44,7 @@ export class PollDetailComponent implements OnInit, OnDestroy {
   userId = signal('');
   recentVotes = signal<Record<string, number>>({}); // Maps optionId to count of active indicators
   participantsCount = signal(1);
+  countDirection = signal<'up' | 'down' | null>(null);
 
   private channel?: EventsChannel;
   private participantsChannel?: EventsChannel;
@@ -67,13 +69,13 @@ export class PollDetailComponent implements OnInit, OnDestroy {
     }
     if (this.participantsHeartbeatInterval) {
       clearInterval(this.participantsHeartbeatInterval);
-      this.pollService.leavePoll(this.pollId(), this.userId());
+      this.pollService.leavePoll(this.pollId(), this.userId()).subscribe();
     }
   }
 
   async subscribeToPollUpdates() {
     try {
-      const channel = `/polls/${this.pollId()}`;
+      const channel = `polls/${this.pollId()}`;
       this.channel = await events.connect(channel);
       this.channel.subscribe({
         next: (event: any) => {
@@ -99,9 +101,23 @@ export class PollDetailComponent implements OnInit, OnDestroy {
     try {
       const channel = `participants/${this.pollId()}`;
       this.participantsChannel = await events.connect(channel);
+      let resetDirectionTimeout: number | undefined;
       this.participantsChannel.subscribe({
         next: (message: any) => {
-          this.participantsCount.set(message.event?.participantsCount ?? 0);
+          if (resetDirectionTimeout) {
+            clearTimeout(resetDirectionTimeout);
+          }
+
+          const newCount = message.event?.participantsCount ?? 0;
+          if (newCount > this.participantsCount()) {
+            this.countDirection.set('up');
+          } else if (newCount < this.participantsCount()) {
+            this.countDirection.set('down');
+          }
+          this.participantsCount.set(newCount);
+
+          // Reset direction after animation finish
+          resetDirectionTimeout = setTimeout(() => this.countDirection.set(null), 600);
         },
         error: (e) => {
           console.error(`Error subscribing to channel ${channel}`, e)

@@ -78,14 +78,25 @@
       </div>
 
       <!-- Live refresh indicator -->
-      <div class="flex items-center gap-2 mb-5">
+      <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2">
           <span class="relative flex h-2 w-2">
             <span
               class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
             ></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-        <span class="text-xs text-emerald-600 font-medium">Real-time updates active</span>
+          <span class="text-xs text-emerald-600 font-medium uppercase tracking-wider">Real-time updates active</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-gray-100/80 text-gray-600 px-2 py-1 rounded-lg border border-gray-200/50 shadow-sm animate-fade-in">
+          <span nz-icon nzType="user" class="text-xs"></span>
+          <span class="text-xs font-bold tabular-nums"
+                [class.animate-pulse-up]="countDirection() === 'up'"
+                [class.animate-pulse-down]="countDirection() === 'down'">
+            {{ participantsCount() }}
+          </span>
+        </div>
       </div>
 
       <!-- Options / voting + live tally -->
