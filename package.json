@@ -1,6 +1,6 @@
 {
-    "name": "claims-approval-app",
-    "description": "claims-approval-app",
+    "name": "poll-voter",
+    "description": "Real-time serverless poll voting application",
     "version": "0.0.1",
     "private": true,
     "dependencies": {
@@ -28,6 +28,7 @@
     "scripts": {
         "test": "jest",
         "lint": "eslint \"**/*.ts\" --quiet --fix && prettier --write \"**/*.{html,css}\"",
-        "compile": "tsc"
+        "compile": "tsc",
+        "frontend:start": "npm --prefix frontend run start"
     }
 }

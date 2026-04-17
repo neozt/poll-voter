@@ -1,16 +1,36 @@
 # Poll Voter
 
+A serverless, real-time poll voting application built with AWS Lambda, AppSync Events, Angular and Aurora Serverless V2 (PostgreSQL).
+
 ## ✨ Key Features
+- **Poll Management**: Create and view detailed results for polls.
+- **Real-time Live Voting**: Instantly see poll results update as users cast their votes via AWS AppSync Events.
+- **Serverless Architecture**: Fully scalable backend using AWS Lambda and Aurora Serverless v2.
+- **Responsive UI**: Modern dashboard built with Angular, Tailwind CSS, and Ng-Zorro Ant Design.
 
 ## 🏗️ Architecture
+The application follows a modern serverless event-driven architecture:
 
-![Architecture diagram](docs/architecture.drawio.png)
+1.  **Frontend**: Hosted on Amazon S3 and distributed via CloudFront.
+2.  **API Layer**: Amazon API Gateway routes requests to Lambda functions.
+3.  **Compute**: AWS Lambda handles business logic (creating polls, retrieving data, recording votes).
+4.  **Database**: Aurora Serverless v2 (PostgreSQL) stores poll data and votes, accessed via the RDS Data API.
+5.  **WebSocket Layer**: Real-time updates pushed to the frontend via AppSync Events.
 
 ## 🛠️ Tech Stack
 
 ### Backend / Infrastructure
+- **Framework**: [AWS SAM](https://aws.amazon.com/serverless/sam/) (Serverless Application Model)
+- **Runtime**: Node.js 24.x (TypeScript)
+- **Compute**: AWS Lambda
+- **Database**: Amazon RDS Aurora Serverless v2 (PostgreSQL)
+- **Database Client**: Utilizing [data-api-client](https://www.npmjs.com/package/data-api-client) library to access RDS via [RDS Data API](https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/Welcome.html)
+- **Real-time**: AWS AppSync Events (HTTP/WebSocket)
 
 ### Frontend
+- **Framework**: Angular
+- **Styling**: Tailwind CSS & [Ng-Zorro Ant Design](https://ng.ant.design/)
+- **Real-time Client**: AWS Amplify to access AppSync Events
 
 ## 🚀 Getting Started
 
@@ -41,11 +61,11 @@
 
 ### 💻 Local Development
 1. **Configure Local Environment**:
-    Create a `frontend/.env.local` file by copying the contents of `frontend/.env` and replacing the placeholders with your CloudFormation output values.
+    Create a `frontend/src/environments/environment.development.ts` file by copying the contents of `frontend/src/environments/environment.ts` and replacing the placeholders with your CloudFormation output values.
 2. **Launch Development Server**:
-    Start the Vite development server to preview the dashboard and market simulator locally:
+    Start the Angular development server to preview the site locally:
     ```bash
-    npm run frontend:dev
+    npm run frontend:start
     ```
 
 ## 🧹 Teardown
