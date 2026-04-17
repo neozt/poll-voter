@@ -22,6 +22,8 @@ The application follows a modern serverless event-driven architecture:
 4.  **Database**: Aurora Serverless v2 (PostgreSQL) stores poll data and votes, accessed via the RDS Data API.
 5.  **WebSocket Layer**: Real-time updates pushed to the frontend via AppSync Events.
 
+![Architecture diagram](docs/architecture_diagram.drawio.png)
+
 ## 🛠️ Tech Stack
 
 ### Backend / Infrastructure
