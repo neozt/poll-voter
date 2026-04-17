@@ -67,6 +67,11 @@ The application follows a modern serverless event-driven architecture:
     ```bash
     npm run frontend:start
     ```
+3. **Hot Reload Lambdas**:
+    Sync Lambda code changes directly to AWS:
+    ```bash
+    sam sync --code --watch --stack-name {stack-name}
+    ```
 
 ## 🧹 Teardown
 To remove all resources created by this project:

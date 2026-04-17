@@ -48,3 +48,11 @@ LEFT JOIN LATERAL (
     WHERE vote.selected_option_id = option.option_id
 ) vote_tally ON TRUE
 ;
+
+CREATE TABLE participant
+(
+    participant_id      UUID UNIQUE         DEFAULT gen_random_uuid(),
+    poll_id             UUID REFERENCES poll (poll_id) ON DELETE CASCADE,
+    latest_heartbeat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (participant_id, poll_id)
+);
