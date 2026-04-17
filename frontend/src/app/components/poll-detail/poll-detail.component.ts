@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { events, EventsChannel } from 'aws-amplify/api';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PollService, Poll, PollOption } from '../../services/poll.service';
+import { Poll, PollOption, PollService } from '../../services/poll.service';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
@@ -37,32 +37,38 @@ export class PollDetailComponent implements OnInit, OnDestroy {
   notFound = signal(false);
   pollId = signal('');
   votingOptionId = signal<string | null>(null);
-
   totalVotes = computed(
     () => this.poll()?.options.reduce((sum, o) => sum + (o.voteCount || 0), 0) ?? 0
   );
-
-  private channel?: EventsChannel;
   userId = signal('');
   recentVotes = signal<Record<string, number>>({}); // Maps optionId to count of active indicators
+  participantsCount = signal(1);
+
+  private channel?: EventsChannel;
+  private participantsChannel?: EventsChannel;
+  private participantsHeartbeatInterval?: number;
+  private readonly HEARTBEAT_INTERVAL = 10000;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     this.pollId.set(id);
-    this.initUserId();
+    this.userId.set(crypto.randomUUID());
     this.loadPoll();
     this.subscribeToPollUpdates();
+    this.subscribeToParticipantsCount();
   }
 
   ngOnDestroy(): void {
     if (this.channel) {
       this.channel.close();
     }
-  }
-
-  initUserId(): void {
-    const id = crypto.randomUUID();
-    this.userId.set(id);
+    if (this.participantsChannel) {
+      this.participantsChannel.close();
+    }
+    if (this.participantsHeartbeatInterval) {
+      clearInterval(this.participantsHeartbeatInterval);
+      this.pollService.leavePoll(this.pollId(), this.userId());
+    }
   }
 
   async subscribeToPollUpdates() {
@@ -79,6 +85,30 @@ export class PollDetailComponent implements OnInit, OnDestroy {
       });
     } catch (err) {
       console.error('Failed to subscribe to poll updates', err);
+    }
+  }
+
+  async subscribeToParticipantsCount() {
+    this.pollService.joinPoll(this.pollId(), this.userId()).subscribe();
+
+    this.participantsHeartbeatInterval = setInterval(
+      () => this.pollService.joinPoll(this.pollId(), this.userId()).subscribe(),
+      this.HEARTBEAT_INTERVAL
+    );
+
+    try {
+      const channel = `participants/${this.pollId()}`;
+      this.participantsChannel = await events.connect(channel);
+      this.participantsChannel.subscribe({
+        next: (message: any) => {
+          this.participantsCount.set(message.event?.participantsCount ?? 0);
+        },
+        error: (e) => {
+          console.error(`Error subscribing to channel ${channel}`, e)
+        }
+      });
+    } catch (err) {
+      console.error('Failed to subscribe to participants count updates', err);
     }
   }
 

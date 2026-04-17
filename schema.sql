@@ -51,7 +51,7 @@ LEFT JOIN LATERAL (
 
 CREATE TABLE participant
 (
-    participant_id      UUID UNIQUE         DEFAULT gen_random_uuid(),
+    participant_id      UUID DEFAULT gen_random_uuid(),
     poll_id             UUID REFERENCES poll (poll_id) ON DELETE CASCADE,
     latest_heartbeat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (participant_id, poll_id)

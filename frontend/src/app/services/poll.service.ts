@@ -54,4 +54,18 @@ export class PollService {
       { optionId, votedBy }
     );
   }
+
+  joinPoll(pollId: string, participantId: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/polls/${pollId}/participants`,
+      {participantId, action: 'HEARTBEAT'}
+    );
+  }
+
+  leavePoll(pollId: string, participantId: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/polls/${pollId}/participants`,
+      {participantId, action: 'LEAVE_POLL'}
+    );
+  }
 }
