@@ -5,6 +5,7 @@ A serverless, real-time poll voting application built with AWS Lambda, AppSync E
 ## ✨ Key Features
 - **Poll Management**: Create and view detailed results for polls.
 - **Real-time Live Voting**: Instantly see poll results update as users cast their votes via AWS AppSync Events.
+- **Real-time Participant Count**: See how many participants are in the same poll as you.
 - **Serverless Architecture**: Fully scalable backend using AWS Lambda and Aurora Serverless v2.
 - **Responsive UI**: Modern dashboard built with Angular, Tailwind CSS, and Ng-Zorro Ant Design.
 
